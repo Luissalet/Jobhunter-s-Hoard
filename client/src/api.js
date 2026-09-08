@@ -32,7 +32,7 @@ export const STATUSES = [
   { id: 'interested', label: 'Me interesa', color: 'bg-sky-600' },
   { id: 'tailored', label: 'CV listo', color: 'bg-violet-600' },
   { id: 'applied', label: 'Aplicada', color: 'bg-indigo-600' },
-  { id: 'answered', label: 'Respuesta', color: 'bg-amber-600' },
+  { id: 'answered', label: 'En proceso', color: 'bg-amber-600' },
   { id: 'interview', label: 'Entrevista', color: 'bg-emerald-600' },
   { id: 'offer', label: 'Oferta ', color: 'bg-green-500' },
   { id: 'rejected', label: 'Rechazada', color: 'bg-rose-800' },

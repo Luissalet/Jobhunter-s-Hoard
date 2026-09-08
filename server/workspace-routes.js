@@ -20,6 +20,7 @@ import {
   saveDraft,
 } from "./applications.js";
 import { callTool, TOOLS } from "./agent-tools.js";
+import { pickSource } from "./source-picker.js";
 
 export function installWorkspaceRoutes(app, port) {
   fs.mkdirSync(store.DATA_DIR, { recursive: true });
@@ -77,6 +78,13 @@ export function installWorkspaceRoutes(app, port) {
       transport: "stdio",
       requiresRunningApp: true,
     })),
+  );
+  app.post(
+    "/api/sources/pick",
+    route((req) => {
+      const { kind } = z.object({ kind: z.enum(["file", "folder"]) }).parse(req.body);
+      return pickSource(kind);
+    }),
   );
   app.post(
     "/api/contexts",

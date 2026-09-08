@@ -238,6 +238,10 @@ test("Sheets import previews, deduplicates and preserves unknown historical date
   const preview = apps.previewSheet(raw, c.id);
   assert.equal(preview[1].duplicate, true);
   assert.equal(preview[0].item.company, "Example A");
+  const inProgress = apps.previewSheet("LINK,EMPRESA,PUESTO,TIPO,ESTADO\nhttps://example.com/process,Example,Engineer,Presencial,En proceso", c.id);
+  assert.equal(inProgress[0].item.status, "answered");
+  assert.equal(inProgress[0].item.workMode, "onsite");
+  assert.deepEqual(inProgress[0].warnings, []);
   const result = apps.importSheet(raw, c.id);
   assert.equal(result.added, 2);
   assert.equal(result.skipped, 1);
@@ -303,6 +307,16 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
       401,
     );
     const conf = await (await fetch(base + "/api/agent/config")).json();
+    const invalidPicker = await fetch(base + "/api/sources/pick", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "folder; Write-Output injected" }),
+    });
+    assert.ok(invalidPicker.status >= 400);
+    const crossSitePicker = await fetch(base + "/api/sources/pick", {
+      method: "POST", headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+      body: JSON.stringify({ kind: "folder" }),
+    });
+    assert.equal(crossSitePicker.status, 403);
     assert.equal(conf.toolCount, 13);
     const transport = new StdioClientTransport({
       command: process.execPath,

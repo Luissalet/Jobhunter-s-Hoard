@@ -292,6 +292,8 @@ const statuses = {
   oferta: "offer",
   offer: "offer",
   respuesta: "answered",
+  "en proceso": "answered",
+  "en curso": "answered",
   answered: "answered",
   "me interesa": "interested",
   interested: "interested",
