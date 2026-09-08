@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { api, statusLabel } from "../api.js";
+import { useEffect, useState } from "react";
+import { api, statusLabel, STATUSES } from "../api.js";
 import Icon from "./Icon.jsx";
+import { wasSubmitted, validDate } from "../job-insights.js";
 export const modeLabel = (m) =>
   ({
     remote: "Remoto",
@@ -26,6 +27,13 @@ export default function ApplicationsTab({
   notify,
 }) {
   const [filter, setFilter] = useState("all"),
+    [statusFilter, setStatusFilter] = useState("all"),
+    [modeFilter, setModeFilter] = useState("all"),
+    [selected, setSelected] = useState([]),
+    [bulkStatus, setBulkStatus] = useState(""),
+    [bulkBusy, setBulkBusy] = useState(false),
+    [sort, setSort] = useState("recent"),
+    [saving, setSaving] = useState({}),
     [query, setQuery] = useState(""),
     [importing, setImporting] = useState(false),
     [raw, setRaw] = useState(""),
@@ -43,8 +51,55 @@ export default function ApplicationsTab({
   const visible = jobs.filter(
     (j) =>
       match(j, filter) &&
+      (statusFilter === "all" || j.status === statusFilter) &&
+      (modeFilter === "all" || (j.workMode || "unknown") === modeFilter) &&
       `${j.title} ${j.company}`.toLowerCase().includes(query.toLowerCase()),
-  );
+  ).sort((a, b) => {
+    const recent = new Date(b.updatedAt) - new Date(a.updatedAt);
+    if (sort === "recent") return recent;
+    if (sort.startsWith("applied")) {
+      if (!validDate(a.appliedAt)) return validDate(b.appliedAt) ? 1 : recent;
+      if (!validDate(b.appliedAt)) return -1;
+      return (new Date(a.appliedAt) - new Date(b.appliedAt)) * (sort.endsWith("desc") ? -1 : 1) || recent;
+    }
+    const order = sort.startsWith("mode")
+      ? ["remote", "hybrid", "onsite", "unknown"]
+      : STATUSES.map((s) => s.id);
+    const field = sort.startsWith("mode") ? "workMode" : "status";
+    const rank = (job) => order.includes(job[field]) ? order.indexOf(job[field]) : order.length;
+    return (rank(a) - rank(b)) * (sort.endsWith("desc") ? -1 : 1) || recent;
+  });
+  useEffect(() => { setSelected([]); }, [filter, statusFilter, modeFilter, query, context.id]);
+  const selectedJobs = visible.filter((j) => selected.includes(j.id));
+  const applyBulk = async () => {
+    if (!bulkStatus || !selectedJobs.length || bulkBusy) return;
+    setBulkBusy(true);
+    let changed = 0;
+    const failed = [];
+    for (const job of selectedJobs) {
+      try { await api.patchJob(job.id, { status: bulkStatus }); changed++; }
+      catch { failed.push(job.id); }
+    }
+    try { await refresh(); }
+    catch { notify("Cambios enviados. No se pudo recargar la lista; vuelve a cargar la página."); }
+    setSelected(failed);
+    setBulkBusy(false);
+    notify(failed.length ? `${changed} actualizadas; ${failed.length} no se pudieron guardar. Puedes reintentarlo.` : `${changed} candidaturas actualizadas.`, failed.length ? "error" : "info");
+  };
+  const changeStatus = async (job, status) => {
+    if (saving[job.id] || status === job.status) return;
+    setSaving((current) => ({ ...current, [job.id]: true }));
+    try {
+      await api.patchJob(job.id, { status });
+      await refresh();
+      notify(`${job.company || job.title}: ${statusLabel(status)}`, "info");
+    } catch (error) {
+      notify(`No se pudo actualizar el estado. ${error.message}`);
+    } finally {
+      setSaving((current) => ({ ...current, [job.id]: false }));
+    }
+  };
+  const toggleSort = (field) => setSort(sort === `${field}-asc` ? `${field}-desc` : `${field}-asc`);
   const importAction = async (commit) => {
     setBusy(true);
     try {
@@ -181,7 +236,7 @@ export default function ApplicationsTab({
       )}
       <div className="list-summary">
         <span>{jobs.length} candidaturas</span>
-        <span>{jobs.filter((j) => match(j, "sent")).length} enviadas</span>
+        <span>{jobs.filter(wasSubmitted).length} envíos registrados</span>
         <span className="summary-context">{context.name}</span>
       </div>
       <div className="table-toolbar">
@@ -190,7 +245,8 @@ export default function ApplicationsTab({
             <button
               key={id}
               className={filter === id ? "selected" : ""}
-              onClick={() => setFilter(id)}
+              aria-pressed={filter === id}
+              onClick={() => { setFilter(id); setStatusFilter("all"); }}
             >
               {label}
               <span>{jobs.filter((j) => match(j, id)).length}</span>
@@ -207,6 +263,47 @@ export default function ApplicationsTab({
           />
         </label>
       </div>
+      <div className="list-controls">
+        <label className="list-control">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setFilter("all"); }}>
+            <option value="all">Todos los estados</option>
+            {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label} ({jobs.filter((j) => j.status === s.id).length})</option>)}
+          </select>
+        </label>
+        <label className="list-control">
+          <span>Modalidad</span>
+          <select value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}>
+            <option value="all">Todas las modalidades</option>
+            {["remote", "hybrid", "onsite", "unknown"].map((mode) => <option key={mode} value={mode}>{modeLabel(mode)}</option>)}
+          </select>
+        </label>
+        <label className="list-control">
+          <span>Ordenar por</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="recent">Última actualización</option>
+            <option value="applied-desc">Fecha de envío: recientes primero</option>
+            <option value="applied-asc">Fecha de envío: antiguas primero</option>
+            <option value="mode-asc">Modalidad: remoto primero</option>
+            <option value="mode-desc">Modalidad: orden inverso</option>
+            <option value="status-asc">Estado: iniciales primero</option>
+            <option value="status-desc">Estado: finales primero</option>
+          </select>
+        </label>
+        <span className="list-result-count" role="status">{visible.length} de {jobs.length} candidaturas</span>
+      </div>
+      {visible.length > 0 && <div className="selection-toolbar">
+        <label className="selection-toggle"><input type="checkbox" checked={selectedJobs.length === visible.length} disabled={bulkBusy} onChange={(e) => setSelected(e.target.checked ? visible.map((j) => j.id) : [])} />Seleccionar visibles</label>
+        {selectedJobs.length > 0 && <>
+          <strong>{selectedJobs.length} seleccionadas</strong>
+          <select aria-label="Estado para las seleccionadas" value={bulkStatus} disabled={bulkBusy} onChange={(e) => setBulkStatus(e.target.value)}>
+            <option value="">Cambiar estado a…</option>
+            {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+          <button className="btn-primary" disabled={bulkBusy || !bulkStatus} onClick={applyBulk}>{bulkBusy ? "Guardando…" : "Aplicar a seleccionadas"}</button>
+          <button className="text-action" disabled={bulkBusy} onClick={() => setSelected([])}>Cancelar selección</button>
+        </>}
+      </div>}
       {!jobs.length && !importing ? (
         <div className="empty-workspace">
           <div className="empty-intro">
@@ -254,21 +351,22 @@ export default function ApplicationsTab({
           </div>
         </div>
       ) : visible.length ? (
-        <div className="jobs-table">
+        <div className="jobs-table selectable-jobs">
           <div className="jobs-table-head">
+            <span />
             <span>Puesto y empresa</span>
-            <span>Modalidad</span>
-            <span>Estado</span>
-            <span>Actualizada</span>
+            <button onClick={() => toggleSort("mode")} aria-label={`Ordenar por modalidad${sort.startsWith("mode") ? ", invertir orden" : ""}`}>Modalidad {sort.startsWith("mode") && (sort.endsWith("asc") ? "↑" : "↓")}</button>
+            <button onClick={() => toggleSort("status")} aria-label={`Ordenar por estado${sort.startsWith("status") ? ", invertir orden" : ""}`}>Estado {sort.startsWith("status") && (sort.endsWith("asc") ? "↑" : "↓")}</button>
+            <button onClick={() => setSort(sort === "applied-desc" ? "applied-asc" : "applied-desc")}>Fecha de envío {sort.startsWith("applied") && (sort.endsWith("asc") ? "↑" : "↓")}</button>
             <span />
           </div>
           {visible.map((j) => (
-            <button
+            <div
               className="job-row"
               key={j.id}
-              onClick={() => openDetail(j.id)}
             >
-              <div className="job-identity">
+              <input type="checkbox" className="job-checkbox" aria-label={`Seleccionar ${j.title} en ${j.company || "empresa por confirmar"}`} disabled={bulkBusy || saving[j.id]} checked={selected.includes(j.id)} onChange={(e) => setSelected((ids) => e.target.checked ? [...ids, j.id] : ids.filter((id) => id !== j.id))} />
+              <button className="job-identity job-open" onClick={() => openDetail(j.id)}>
                 <span className="company-monogram">
                   {(j.company || j.title).slice(0, 2).toUpperCase()}
                 </span>
@@ -279,10 +377,14 @@ export default function ApplicationsTab({
                     {j.location ? ` · ${j.location}` : ""}
                   </small>
                 </span>
-              </div>
+              </button>
               <span className="job-mode">{modeLabel(j.workMode)}</span>
-              <span>
-                <span className={`status-badge ${j.status}`}>
+              <div className="job-status-control">
+                <select className={`status-badge status-select ${j.status}`} aria-label={`Estado de ${j.title} en ${j.company || "empresa por confirmar"}`} value={j.status} disabled={bulkBusy || saving[j.id]} onChange={(e) => changeStatus(j, e.target.value)}>
+                  {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+                {saving[j.id] && <small role="status">Guardando…</small>}
+                {["unknown", "blocked", "in_progress"].includes(j.application?.state) && <small>
                   {["unknown", "blocked", "in_progress"].includes(
                     j.application?.state,
                   )
@@ -292,16 +394,17 @@ export default function ApplicationsTab({
                         in_progress: "En curso",
                       }[j.application.state]
                     : statusLabel(j.status)}
-                </span>
-              </span>
-              <time>
-                {new Date(j.updatedAt).toLocaleDateString("es-ES", {
+                </small>}
+              </div>
+              <time className="job-applied-date" dateTime={validDate(j.appliedAt) ? j.appliedAt : undefined}>
+                <span className="mobile-date-label">Envío: </span>{validDate(j.appliedAt) ? new Date(j.appliedAt).toLocaleDateString("es-ES", {
                   day: "numeric",
                   month: "short",
-                })}
+                  year: "numeric",
+                }) : "Sin fecha"}
               </time>
-              <Icon name="arrow" />
-            </button>
+              <button className="job-detail-link" aria-label={`Abrir ${j.title} en ${j.company || "empresa por confirmar"}`} onClick={() => openDetail(j.id)}><Icon name="arrow" /></button>
+            </div>
           ))}
         </div>
       ) : (
@@ -312,6 +415,8 @@ export default function ApplicationsTab({
             className="btn-ghost"
             onClick={() => {
               setFilter("all");
+              setStatusFilter("all");
+              setModeFilter("all");
               setQuery("");
             }}
           >

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useUnsavedChanges } from "../useUnsavedChanges.js";
 import { api } from "../api.js";
 import Icon from "./Icon.jsx";
+import LettersLibrary from "./LettersLibrary.jsx";
 export function Field({ label, children, hint, ...props }) {
   return (
     <label className="field">
@@ -41,6 +42,7 @@ const sections = [
   ["instructions", "Instrucciones"],
   ["sources", "Fuentes"],
   ["answers", "Respuestas"],
+  ["letters", "Cartas"],
 ];
 export default function WorkspaceTab({
   context,
@@ -55,6 +57,7 @@ export default function WorkspaceTab({
       ...context,
       preferences: { ...defaults, ...context.preferences },
       answers: context.answers || [],
+      letters: context.letters || [],
     }),
     [personal, setPersonal] = useState(state.settings.personal),
     [profile, setProfile] = useState(state.profile),
@@ -67,6 +70,8 @@ export default function WorkspaceTab({
     [newName, setNewName] = useState(""),
     [newOpen, setNewOpen] = useState(false),
     [question, setQuestion] = useState(""),
+    [answerQuery, setAnswerQuery] = useState(""),
+    [editingAnswer, setEditingAnswer] = useState(null),
     [answer, setAnswer] = useState("");
   const pendingSource = !!(
     source.label ||
@@ -235,6 +240,7 @@ export default function WorkspaceTab({
         ))}
       </div>
       <div className="context-editor" role="tabpanel">
+        {section === "letters" && <LettersLibrary letters={draft.letters} onChange={(letters) => set("letters", letters)} notify={notify} />}
         {section === "profile" && (
           <>
             <div className="editor-heading">
@@ -472,12 +478,23 @@ export default function WorkspaceTab({
                 una oferta pregunta algo distinto, la IA debe comprobarlo.
               </p>
             </div>
-            {draft.answers.map((a, i) => (
+            <label className="search-field answer-search"><Icon name="search" /><input aria-label="Buscar respuestas" placeholder="Buscar por pregunta o respuesta" value={answerQuery} onChange={(e) => setAnswerQuery(e.target.value)} /></label>
+            <p className="supporting-copy">{draft.answers.filter((a) => `${a.question} ${a.answer}`.toLocaleLowerCase().includes(answerQuery.toLocaleLowerCase())).length} de {draft.answers.length} respuestas</p>
+            {draft.answers.map((a, i) => (editingAnswer === i || `${a.question} ${a.answer}`.toLocaleLowerCase().includes(answerQuery.toLocaleLowerCase())) && (
               <div className="answer-row" key={i}>
                 <div>
-                  <strong>{a.question}</strong>
-                  <p>{a.answer}</p>
+                  {editingAnswer === i ? <>
+                    <Field label="Editar pregunta" value={a.question} onChange={(e) => set("answers", draft.answers.map((item, index) => index === i ? { ...item, question: e.target.value } : item))} />
+                    <Field label="Editar respuesta"><textarea rows="4" value={a.answer} onChange={(e) => set("answers", draft.answers.map((item, index) => index === i ? { ...item, answer: e.target.value } : item))} /></Field>
+                    <button className="text-action" onClick={() => setEditingAnswer(null)}>Terminar edición</button>
+                  </> : <><strong>{a.question}</strong><p>{a.answer}</p></>}
                 </div>
+                <div className="answer-actions">
+                <button className="text-action" onClick={async () => {
+                  try { await navigator.clipboard.writeText(a.answer); notify("Respuesta copiada.", "info"); }
+                  catch { notify("No se pudo copiar. Selecciona el texto y cópialo manualmente."); }
+                }}>Copiar</button>
+                <button className="text-action" onClick={() => setEditingAnswer(i)}>Editar</button>
                 <button
                   className="text-action muted"
                   onClick={() =>
@@ -489,6 +506,7 @@ export default function WorkspaceTab({
                 >
                   Quitar
                 </button>
+                </div>
               </div>
             ))}
             <Field

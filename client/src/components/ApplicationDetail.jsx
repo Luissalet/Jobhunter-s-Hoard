@@ -3,12 +3,14 @@ import { api, STATUSES, statusLabel } from "../api.js";
 import { Field } from "./WorkspaceTab.jsx";
 import { modeLabel } from "./ApplicationsTab.jsx";
 import Icon from "./Icon.jsx";
+import { localDateValue, validDate } from "../job-insights.js";
 import { confirmDiscard, useUnsavedChanges } from "../useUnsavedChanges.js";
 export default function ApplicationDetail({ job, close, notify, refresh }) {
   const dialog = useRef(null),
     [tab, setTab] = useState("offer"),
     [busy, setBusy] = useState(""),
     [notes, setNotes] = useState(job.notes || ""),
+    [offerEdit, setOfferEdit] = useState(null),
     [draft, setDraft] = useState(
       job.application?.draft || {
         cvMarkdown: job.tailored?.cvMarkdown || "",
@@ -22,7 +24,7 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
   useEffect(() => {
     dialog.current.showModal();
   }, []);
-  const pending = dirty || notes !== (job.notes || "");
+  const pending = dirty || notes !== (job.notes || "") || !!offerEdit;
   useUnsavedChanges(pending);
   const requestClose = () => {
     if (confirmDiscard(pending)) close();
@@ -130,6 +132,17 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
       <div className="detail-body">
         {tab === "offer" && (
           <>
+            <div className="section-heading"><h3>Datos de la oferta</h3>{!offerEdit && <button className="btn-ghost" onClick={() => setOfferEdit({ title: job.title, company: job.company || "", location: job.location || "", workMode: job.workMode || "unknown", salary: job.salary || "", url: job.url || "", description: job.description || "", appliedAt: localDateValue(job.appliedAt) })}>Editar datos</button>}</div>
+            {offerEdit && <form className="offer-editor inline-panel" onSubmit={(e) => { e.preventDefault(); action("offer", async () => { await api.patchJob(job.id, { ...offerEdit, appliedAt: offerEdit.appliedAt ? offerEdit.appliedAt + "T12:00:00" : null }); setOfferEdit(null); }); }}>
+              <Field label="Puesto" required value={offerEdit.title} onChange={(e) => setOfferEdit({ ...offerEdit, title: e.target.value })} />
+              <Field label="Empresa" value={offerEdit.company} onChange={(e) => setOfferEdit({ ...offerEdit, company: e.target.value })} />
+              <div className="form-grid"><Field label="Modalidad"><select value={offerEdit.workMode} onChange={(e) => setOfferEdit({ ...offerEdit, workMode: e.target.value })}>{["remote", "hybrid", "onsite", "unknown"].map((mode) => <option key={mode} value={mode}>{modeLabel(mode)}</option>)}</select></Field><Field label="Ubicación" value={offerEdit.location} onChange={(e) => setOfferEdit({ ...offerEdit, location: e.target.value })} /></div>
+              <Field label="Salario publicado" value={offerEdit.salary} onChange={(e) => setOfferEdit({ ...offerEdit, salary: e.target.value })} />
+              <Field label="Enlace original" type="url" value={offerEdit.url} onChange={(e) => setOfferEdit({ ...offerEdit, url: e.target.value })} />
+              <Field label="Fecha de envío" type="date" hint="Déjala vacía si no conoces la fecha real." value={offerEdit.appliedAt} onChange={(e) => setOfferEdit({ ...offerEdit, appliedAt: e.target.value })} />
+              <Field label="Descripción"><textarea rows="7" value={offerEdit.description} onChange={(e) => setOfferEdit({ ...offerEdit, description: e.target.value })} /></Field>
+              <div className="form-actions"><button className="btn-primary" disabled={!!busy || !offerEdit.title.trim()}>{busy === "offer" ? "Guardando…" : "Guardar datos"}</button><button className="btn-ghost" type="button" disabled={!!busy} onClick={() => setOfferEdit(null)}>Cancelar</button></div>
+            </form>}
             <div className="job-facts">
               <span>
                 <small>Modalidad</small>
@@ -376,7 +389,8 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
               <Field
                 label="Próxima acción"
                 type="date"
-                value={job.nextActionAt?.slice(0, 10) || ""}
+                value={localDateValue(job.nextActionAt)}
+                disabled={!!busy}
                 onChange={(e) =>
                   action("date", () =>
                     api.patchJob(job.id, {
@@ -388,7 +402,8 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
               <Field
                 label="Entrevista"
                 type="datetime-local"
-                value={job.interviewAt?.slice(0, 16) || ""}
+                value={validDate(job.interviewAt) ? `${localDateValue(job.interviewAt)}T${String(new Date(job.interviewAt).getHours()).padStart(2, "0")}:${String(new Date(job.interviewAt).getMinutes()).padStart(2, "0")}` : ""}
+                disabled={!!busy}
                 onChange={(e) =>
                   action("interview", () =>
                     api.patchJob(job.id, {

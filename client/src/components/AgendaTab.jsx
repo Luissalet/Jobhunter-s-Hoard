@@ -1,134 +1,42 @@
-import { useMemo, useState } from 'react';
-import { api, daysAgo, statusLabel } from '../api.js';
-
-function Row({ job, openDetail, children }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3">
-      <div className="min-w-0 flex-1 cursor-pointer" onClick={() => openDetail(job.id)}>
-        <p className="truncate text-sm font-semibold text-slate-100">{job.title}</p>
-        <p className="truncate text-xs text-indigo-300">
-          {job.company} · <span className="text-slate-500">{statusLabel(job.status)}</span>
-          {job.appliedAt && <span className="text-slate-500"> · aplicada hace {daysAgo(job.appliedAt)}d</span>}
-        </p>
-      </div>
-      <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{children}</div>
-    </div>
-  );
-}
+import { useState } from "react";
+import { api, statusLabel } from "../api.js";
+import { agendaGroups, localDateValue } from "../job-insights.js";
+import Icon from "./Icon.jsx";
 
 export default function AgendaTab({ jobs, replaceJob, openDetail, notify }) {
-  const [busyId, setBusyId] = useState(null);
-  const now = Date.now();
-  const in14d = now + 14 * 86400000;
-
-  const followupsDue = useMemo(
-    () =>
-      jobs
-        .filter((j) => j.nextActionAt && new Date(j.nextActionAt).getTime() <= now && !['rejected', 'discarded', 'offer'].includes(j.status))
-        .sort((a, b) => new Date(a.nextActionAt) - new Date(b.nextActionAt)),
-    [jobs, now]
-  );
-
-  const upcoming = useMemo(
-    () =>
-      jobs
-        .filter((j) => j.interviewAt && new Date(j.interviewAt).getTime() >= now - 86400000 && new Date(j.interviewAt).getTime() <= in14d)
-        .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt)),
-    [jobs, now, in14d]
-  );
-
-  const future = useMemo(
-    () =>
-      jobs
-        .filter((j) => j.nextActionAt && new Date(j.nextActionAt).getTime() > now && !['rejected', 'discarded'].includes(j.status))
-        .sort((a, b) => new Date(a.nextActionAt) - new Date(b.nextActionAt))
-        .slice(0, 10),
-    [jobs, now]
-  );
-
-  const patch = async (id, body) => {
-    try {
-      replaceJob(await api.patchJob(id, body));
-    } catch (e) {
-      notify(e.message);
-    }
+  const [view, setView] = useState("due"), [busy, setBusy] = useState({});
+  const groups = agendaGroups(jobs);
+  const tabs = [["due", "Hoy y atrasadas"], ["interviews", "Entrevistas"], ["future", "Programadas"], ["unplanned", "Sin próxima acción"]];
+  const patch = async (job, body) => {
+    setBusy((b) => ({ ...b, [job.id]: true }));
+    try { replaceJob(await api.patchJob(job.id, body)); notify("Seguimiento actualizado.", "info"); }
+    catch (e) { notify(e.message); }
+    finally { setBusy((b) => ({ ...b, [job.id]: false })); }
   };
-
-  const draftFollowup = async (job) => {
-    setBusyId(job.id);
-    try {
-      replaceJob(await api.followup(job.id, job.lang));
-      openDetail(job.id);
-      notify('Borrador de follow-up listo — revísalo en el panel ', 'info');
-    } catch (e) {
-      notify(e.message);
-    }
-    setBusyId(null);
+  const draft = async (job) => {
+    setBusy((b) => ({ ...b, [job.id]: true }));
+    try { replaceJob(await api.followup(job.id, job.lang)); openDetail(job.id); notify("Borrador listo en Actividad.", "info"); }
+    catch (e) { notify(e.message); }
+    finally { setBusy((b) => ({ ...b, [job.id]: false })); }
   };
-
-  const postpone = (job, days) =>
-    patch(job.id, { nextActionAt: new Date(now + days * 86400000).toISOString() });
-
-  return (
-    <div className="h-full overflow-y-auto p-4">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <section>
-          <h2 className="mb-2 font-bold"> Follow-ups pendientes ({followupsDue.length})</h2>
-          {followupsDue.length === 0 ? (
-            <p className="text-sm text-slate-500">Nada pendiente. Al marcar una oferta como aplicada, se programa un follow-up automático a los 10 días.</p>
-          ) : (
-            <div className="space-y-2">
-              {followupsDue.map((j) => (
-                <Row key={j.id} job={j} openDetail={openDetail}>
-                  <button className="btn-primary text-xs" disabled={busyId === j.id} onClick={() => draftFollowup(j)}>
-                    {busyId === j.id ? ' Redactando…' : ' Redactar follow-up'}
-                  </button>
-                  <button className="btn-ghost text-xs" onClick={() => postpone(j, 5)}>＋5 días</button>
-                  <button className="btn-ghost text-xs" onClick={() => patch(j.id, { nextActionAt: null })}> Hecho</button>
-                </Row>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <h2 className="mb-2 font-bold"> Entrevistas próximas ({upcoming.length})</h2>
-          {upcoming.length === 0 ? (
-            <p className="text-sm text-slate-500">Sin entrevistas programadas. Ponles fecha desde el detalle de cada oferta.</p>
-          ) : (
-            <div className="space-y-2">
-              {upcoming.map((j) => (
-                <Row key={j.id} job={j} openDetail={openDetail}>
-                  <span className="chip bg-emerald-900/60 text-emerald-300">
-                    {new Date(j.interviewAt).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {j.interviewPrep ? (
-                    <a href={`/api/jobs/${j.id}/prep.html`} target="_blank" rel="noopener" className="btn-ghost text-xs"> Ver prep</a>
-                  ) : (
-                    <button className="btn-primary text-xs" onClick={() => openDetail(j.id)}>Preparar →</button>
-                  )}
-                </Row>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {future.length > 0 && (
-          <section>
-            <h2 className="mb-2 font-bold text-slate-400"> Próximas acciones</h2>
-            <div className="space-y-2 opacity-70">
-              {future.map((j) => (
-                <Row key={j.id} job={j} openDetail={openDetail}>
-                  <span className="chip bg-slate-800 text-slate-400">
-                    {new Date(j.nextActionAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                  </span>
-                </Row>
-              ))}
-            </div>
-          </section>
-        )}
+  const postpone = (job, days) => {
+    const date = new Date(); date.setDate(date.getDate() + days);
+    patch(job, { nextActionAt: localDateValue(date) + "T09:00:00" });
+  };
+  return <div className="agenda-workspace">
+    {groups.unplanned.length > 0 && <div className="context-notice"><Icon name="calendar" /><div><strong>{groups.unplanned.length} candidaturas abiertas sin próxima acción</strong><p>Una candidatura importada puede no tener fecha de envío. Planifica cuándo revisarla para que aparezca en tu agenda.</p></div><button className="btn-ghost" onClick={() => setView("unplanned")}>Planificar</button></div>}
+    <div className="filter-tabs agenda-tabs" aria-label="Vistas de seguimiento">{tabs.map(([id, label]) => <button key={id} className={view === id ? "selected" : ""} aria-pressed={view === id} onClick={() => setView(id)}>{label}<span>{groups[id].length}</span></button>)}</div>
+    <p className="supporting-copy">{view === "interviews" ? "Entrevistas de hoy y de los próximos 14 días." : view === "unplanned" ? "Elige una fecha para volver a revisar cada candidatura." : "El recordatorio organiza tu trabajo; redactar un mensaje no lo envía."}</p>
+    {groups[view].length ? <div className="agenda-list">{groups[view].map((job) => <article className="agenda-row" key={job.id}>
+      <button className="agenda-identity job-open" onClick={() => openDetail(job.id)}><strong>{job.title}</strong><span>{job.company || "Empresa por confirmar"} · {statusLabel(job.status)}</span></button>
+      <div className="agenda-date">
+        {view === "interviews" ? <time>{new Date(job.interviewAt).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time> : <label><span>Próxima revisión</span><input type="date" aria-label={"Próxima revisión de " + (job.company || job.title)} disabled={busy[job.id]} value={localDateValue(job.nextActionAt)} onChange={(e) => patch(job, { nextActionAt: e.target.value ? e.target.value + "T09:00:00" : null })} /></label>}
       </div>
-    </div>
-  );
+      <div className="agenda-actions">
+        {view === "due" && <><button className="btn-ghost" disabled={busy[job.id]} onClick={() => draft(job)}>Redactar mensaje</button><button className="btn-ghost" disabled={busy[job.id]} onClick={() => postpone(job, 5)}>Posponer 5 días</button><button className="text-action" disabled={busy[job.id]} onClick={() => patch(job, { nextActionAt: null })}>Hecho</button></>}
+        {view === "unplanned" && <button className="btn-ghost" disabled={busy[job.id]} onClick={() => postpone(job, 1)}>Revisar mañana</button>}
+        {view === "interviews" && <button className="btn-ghost" onClick={() => openDetail(job.id)}>Preparar entrevista</button>}
+      </div>
+    </article>)}</div> : <div className="section-empty"><Icon name="calendar" width="28" height="28" /><h2>{view === "due" ? "Hoy no tienes revisiones programadas" : view === "interviews" ? "Sin entrevistas próximas" : view === "future" ? "Tu agenda está por organizar" : "Todas tienen un próximo paso"}</h2><p>{view === "interviews" ? "Añade la fecha de una entrevista desde Actividad, dentro de la candidatura." : "Puedes programar una revisión en Sin próxima acción o desde el detalle de una candidatura."}</p>{groups.unplanned.length > 0 && view !== "unplanned" && <button className="btn-ghost" onClick={() => setView("unplanned")}>Organizar candidaturas abiertas</button>}</div>}
+  </div>;
 }
-

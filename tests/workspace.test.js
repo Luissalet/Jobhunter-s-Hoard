@@ -16,6 +16,14 @@ const root = path.resolve(import.meta.dirname, "..");
 after(async () => {
   await fs.rm(temp, { recursive: true, force: true });
 });
+test("letter library survives context updates and is available to connected assistants", async () => {
+  const context = store.saveContext(ctx.contextSchema.parse({ name: "Letters", letters: [{ id: "one", name: "General", lang: "es", body: "Hola {{empresa}}" }] }));
+  store.saveContext(ctx.contextSchema.parse({ id: context.id, name: "Renamed" }));
+  assert.equal(store.getContext(context.id).letters[0].body, "Hola {{empresa}}");
+  const dossier = await ctx.buildContext(context.id);
+  assert.equal(dossier.context.letters[0].name, "General");
+  assert.equal(ctx.contextSchema.safeParse({ name: "Bad", letters: [{ id: "bad", name: "", lang: "es", body: "" }] }).success, false);
+});
 test("context boundaries, current files, scoped search and extraction", async () => {
   const a = store.saveContext({ name: "Context A", preferences: {} }),
     b = store.saveContext({ name: "Context B", preferences: {} });

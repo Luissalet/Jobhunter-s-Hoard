@@ -31,6 +31,12 @@ export const contextSchema = z.object({
     )
     .max(100)
     .default([]),
+  letters: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().trim().min(1).max(160),
+    lang: z.enum(["es", "en"]),
+    body: text,
+  })).max(50).optional(),
 });
 export const sourceSchema = z.object({
   kind: z.enum(["file", "folder", "url", "note"]),
@@ -392,6 +398,7 @@ export async function buildContext(contextId) {
       instructions: c.instructions,
       preferences: c.preferences,
       answers: c.answers,
+      letters: c.letters || [],
     },
     personal: store.getSettings().personal,
     profile: store.getProfile(),

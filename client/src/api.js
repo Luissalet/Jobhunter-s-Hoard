@@ -28,13 +28,13 @@ export const api = {
 };
 
 export const STATUSES = [
-  { id: 'inbox', label: 'Inbox', color: 'bg-slate-600' },
+  { id: 'inbox', label: 'Pendiente', color: 'bg-slate-600' },
   { id: 'interested', label: 'Me interesa', color: 'bg-sky-600' },
   { id: 'tailored', label: 'CV listo', color: 'bg-violet-600' },
-  { id: 'applied', label: 'Aplicada', color: 'bg-indigo-600' },
+  { id: 'applied', label: 'Enviada', color: 'bg-indigo-600' },
   { id: 'answered', label: 'En proceso', color: 'bg-amber-600' },
   { id: 'interview', label: 'Entrevista', color: 'bg-emerald-600' },
-  { id: 'offer', label: 'Oferta ', color: 'bg-green-500' },
+  { id: 'offer', label: 'Oferta', color: 'bg-green-500' },
   { id: 'rejected', label: 'Rechazada', color: 'bg-rose-800' },
   { id: 'discarded', label: 'Descartada', color: 'bg-slate-800' },
 ];
