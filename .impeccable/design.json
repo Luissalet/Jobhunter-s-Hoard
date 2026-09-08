@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-07T14:01:43.399Z",
+  "generatedAt": "2026-09-08T06:57:16.509Z",
   "title": "Design System: Jubhunter's Hoard",
   "extensions": {
     "colorMeta": {
@@ -564,6 +564,13 @@
       "description": "Sección seleccionada dentro de un formulario o detalle.",
       "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Secciones de ejemplo\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Preparación</button></div>",
       "css": ".ds-tabs{display:flex;gap:24px;border-bottom:1px solid var(--line,#e3e7df);overflow-x:auto}.ds-tab{display:flex;gap:8px;align-items:center;padding:13px 0 14px;border:0;border-bottom:2px solid #476e3f;background:transparent;font:600 12px 'Segoe UI',system-ui,sans-serif;white-space:nowrap;color:#305832;cursor:pointer}.ds-tab:focus-visible{outline:2px solid #497858;outline-offset:3px;}"
+    },
+    {
+      "name": "Distribution Row",
+      "kind": "custom",
+      "description": "Etiqueta, medidor y cifra legible para distribuciones de resultados.",
+      "html": "<div class=\"ds-distribution\"><span>Por confirmar</span><meter min=\"0\" max=\"1\" value=\"0\" aria-label=\"Por confirmar\"></meter><strong>0</strong></div>",
+      "css": ".ds-distribution{display:grid;grid-template-columns:115px minmax(0,1fr) 28px;align-items:center;gap:12px;font:12px \"Segoe UI\",system-ui,sans-serif;color:var(--ink,#27372c)}.ds-distribution strong{text-align:right;font-variant-numeric:tabular-nums}.ds-distribution meter{width:100%;height:12px;border:none;background:var(--soft,#eef2e9);border-radius:3px}.ds-distribution meter::-webkit-meter-bar{background:var(--soft,#eef2e9);border:0;border-radius:3px}.ds-distribution meter::-webkit-meter-optimum-value{background:var(--accent,#28543a);border-radius:3px}.ds-distribution meter::-moz-meter-bar{background:var(--accent,#28543a)}"
     }
   ],
   "narrative": {

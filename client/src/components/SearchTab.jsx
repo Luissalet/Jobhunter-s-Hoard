@@ -88,6 +88,7 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
         <div className="flex flex-wrap gap-2">
           <input
             className="input flex-1 min-w-64"
+            aria-label="Puesto o palabras clave"
             placeholder="Qué buscas: software engineer, machine learning, C++…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -95,6 +96,7 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
           />
           <input
             className="input w-56"
+            aria-label="Ubicación de búsqueda"
             placeholder="Ubicación (para Adzuna): Madrid…"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
@@ -103,21 +105,22 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
             {loading ? 'Buscando…' : ' Buscar'}
           </button>
           <button type="button" className="btn-ghost" disabled={!query.trim()} onClick={saveCurrent} title="Guardar esta búsqueda">
-            
+            Guardar búsqueda
           </button>
         </div>
         {savedSearches.length > 0 && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] text-slate-500">Guardadas:</span>
             {savedSearches.map((s, i) => (
-              <span key={i} className="chip cursor-pointer bg-slate-800 text-slate-300 hover:bg-indigo-900" onClick={() => applySaved(s)}>
-                 {s.name}
+              <span key={i} className="chip bg-slate-800 text-slate-300">
+                <button type="button" disabled={loading} onClick={() => applySaved(s)}>{s.name}</button>
                 <button
+                  type="button"
                   className="ml-1.5 text-slate-500 hover:text-rose-400"
                   onClick={(e) => { e.stopPropagation(); deleteSaved(i); }}
                   title="Borrar búsqueda guardada"
                 >
-                  
+                  Quitar
                 </button>
               </span>
             ))}
@@ -131,6 +134,7 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
                 key={s.id}
                 type="button"
                 disabled={disabled}
+                aria-pressed={chosen.has(s.id)}
                 onClick={() => toggleSource(s.id)}
                 title={disabled ? 'Necesita key gratuita — ver Ajustes' : ''}
                 className={`chip transition-colors ${

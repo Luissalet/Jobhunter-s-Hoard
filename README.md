@@ -61,6 +61,15 @@ Antes de rellenar/enviar, `start_application` devuelve un identificador de inten
 
 Jubhunter's Hoard no abre sesiones, supera CAPTCHAs, acepta acuerdos ni ejecuta clics por sí mismo. No se han enviado candidaturas reales durante el desarrollo.
 
+## Organizar candidaturas y reutilizar textos
+
+- En **Candidaturas**, combina búsqueda con los filtros exactos de **Estado** y **Modalidad**. **Ordenar por** permite ordenar por actualización, fecha de envío, modalidad o estado. La fecha sigue visible en móvil; **Sin fecha** indica que no está registrada. Cambia un estado desde su fila o marca varias candidaturas y usa **Aplicar a seleccionadas**. **Seleccionar visibles** afecta a la vista filtrada; cambiar filtros, búsqueda o contexto limpia la selección.
+- Abre una candidatura y usa **Oferta → Editar datos** para corregir sus datos y completar la fecha real de envío. Confirma con **Guardar datos**; deja la fecha vacía si no la conoces.
+- En **Seguimiento → Sin próxima acción**, programa la próxima revisión de candidaturas enviadas, con respuesta o en entrevista que aún no tienen revisión ni entrevista futura. Puedes elegir una fecha o **Revisar mañana**, aunque falte la fecha de envío. **Redactar mensaje** prepara un borrador; no lo envía.
+- **Resultados** incluye rechazos entre las respuestas y conserva hitos de entrevista y oferta registrados en el historial. Compara estado actual, modalidad, actividad de ocho semanas y fuente. Los envíos sin fecha cuentan en los totales, pero no en la actividad semanal.
+- En **Mi contexto → Respuestas**, busca por pregunta o respuesta, copia un texto o edítalo. **Terminar edición** cierra la fila; **Guardar cambios** guarda tus modificaciones.
+- En **Mi contexto → Cartas**, crea o selecciona una carta, edita su nombre, idioma español/inglés y texto base. Puedes incluir `{{puesto}}` y `{{empresa}}`. **Puesto** y **Empresa** cambian solo la vista previa; **Copiar carta preparada** copia el resultado cuando las variables están completas. **Guardar cambios** guarda las plantillas de ese contexto, incluidas altas, ediciones y eliminaciones.
+
 ## Traer tu Google Sheet
 
 En **Candidaturas → Importar hoja**, pega las celdas con cabeceras o carga CSV/TSV. Se reconocen `LINK`, `EMPRESA`, `PUESTO`, `TIPO`, `ESTADO`, ubicación, notas y fecha de envío. Primero se muestra una vista previa con duplicados y estados no reconocidos. Las fechas históricas ausentes se mantienen desconocidas, sin contarlas como envíos de hoy. Se admiten hasta 2.000 filas por importación. No hay sincronización continua con Google Sheets.

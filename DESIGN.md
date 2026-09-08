@@ -176,11 +176,12 @@ La jerarquía es contenida y humana: títulos seminegrita, texto pequeño precis
 
 El escritorio utiliza una cuadrícula de índice (224px) y contenido flexible con mínimo cero. El índice permanece pegado arriba y ocupa (100dvh). La barra superior mide (78px); la página centra un contenido máximo de (1510px), con márgenes interiores de (42px 40px 24px).
 
-Las filas de candidaturas alinean identidad, modalidad, estado, fecha y flecha. La primera columna admite títulos largos y salto de palabra. Los formularios usan dos columnas con separación de (24px), y el editor de contexto se limita a (900px). Las secciones se recorren con pestañas horizontales y el guardado queda visible al pie mediante una barra sticky.
+Las filas de candidaturas alinean selección, identidad, modalidad, estado editable, fecha de envío y apertura del detalle. La identidad admite títulos largos y salto de palabra. Los formularios usan dos columnas con separación de (24px), y el editor de contexto se limita a (900px). Las secciones se recorren con pestañas horizontales y el guardado queda visible al pie mediante una barra sticky.
 
 - A partir de (1500px), los márgenes laterales aumentan a (56px).
 - Hasta (1150px), el índice se reduce a (195px), los márgenes de página a (26px) y las filas se compactan.
-- Hasta (800px), el índice se convierte en navegación horizontal desplazable, la barra superior mide (58px), la página usa márgenes laterales de (20px), y formularios, bienvenida y conexión pasan a una columna. La tabla oculta cabecera, fecha y flecha; cada candidatura apila identidad y metadatos.
+- Hasta (800px), el índice se convierte en navegación horizontal desplazable, la barra superior mide (58px), la página usa márgenes laterales de (20px), y formularios, bienvenida y conexión pasan a una columna. La tabla oculta cabecera y flecha; cada candidatura apila identidad y metadatos y conserva la fecha con la etiqueta «Envío». Selección y estado siguen disponibles.
+- Resultados utiliza cuatro cifras de resumen y dos columnas de distribuciones; hasta (800px) pasa a dos cifras por fila y una columna de secciones. La agenda permite envolver acciones y fechas; las respuestas colocan sus acciones debajo del texto. Los filtros, el estado editable, la fecha de revisión y la acción de selección múltiple alcanzan (44px) de altura en móvil.
 - El detalle es un panel derecho de hasta (760px), limitado al ancho de pantalla, con altura de (100dvh). En móvil ocupa el ancho disponible. Su encabezado y pestañas no se comprimen; el cuerpo usa flex, mínimo de altura cero y desplazamiento propio. No restaurar las alturas calculadas anteriores: las reglas finales de la hoja las sustituyen para soportar encabezados multilínea y pantallas estrechas.
 
 ## Elevation & Depth
@@ -224,9 +225,21 @@ La bienvenida se divide en introducción tonal y tres pasos sobre blanco; pasa a
 
 Diálogo nativo con nombre accesible, cierre visible y pestañas Oferta, Preparación y Actividad. El encabezado mantiene identidad y acción de apertura; el cuerpo desplaza documentos, notas y resultados. Los formularios con cambios pendientes protegen el cierre o la navegación. Mantener esta protección al extenderlos.
 
+La sección Oferta alterna lectura y formulario mediante «Editar datos». «Guardar datos» y «Cancelar» quedan junto a los campos; una fecha desconocida se presenta como «Sin fecha» y admite un campo vacío al editar.
+
+### Operational lists and distributions
+
+Los filtros exactos llevan etiquetas visibles y el orden tiene un selector disponible también sin cabecera de tabla. Cada fila separa abrir, seleccionar y cambiar estado. La selección usa checkbox y fondo `soft`; la barra muestra cantidad, estado de destino y una acción explícita. «Guardando…» y los controles deshabilitados comunican la operación en curso; los fallos parciales conservan las filas que se pueden reintentar.
+
+La agenda usa filas con identidad, fecha y acciones. Los avisos de planificación y fechas ausentes utilizan superficie `soft`, icono y explicación escrita. Las distribuciones alinean etiqueta, medidor nativo y cifra tabular; el color bosque refuerza un valor que también se puede leer. Estado actual e hitos históricos se explican mediante títulos y ayudas distintos.
+
 ### Context editor and feedback
 
 Perfil, preferencias, instrucciones, fuentes y respuestas permanecen en secciones separadas. El guardado de contexto/perfil conserva su alcance; añadir una fuente tiene su propia acción y borrador. No mostrar el guardado de una región como si persistiera otra. Los avisos se sitúan centrados abajo, admiten cierre y usan `status` o `alert` según su naturaleza.
+
+Respuestas combina búsqueda por pregunta o contenido, recuento y acciones de copiar y editar en la misma fila. El texto conserva saltos de línea y admite palabras largas. «Terminar edición» cierra el editor de la fila; «Guardar cambios» persiste el borrador del contexto.
+
+Cartas reutiliza las etiquetas y formularios del contexto: selector de carta, nombre, idioma español/inglés y texto base. Una línea separa la personalización para una candidatura. La vista previa es un textarea de solo lectura con fondo `soft`; un aviso textual enumera las variables pendientes y deshabilita copiar mientras falten valores. «Guardar cambios» guarda las plantillas del contexto; Puesto y Empresa afectan solo a la vista previa.
 
 Las transiciones sirven a estados de control. La preferencia de movimiento reducido desactiva animaciones, transiciones y desplazamiento animado.
 

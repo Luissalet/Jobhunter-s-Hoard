@@ -161,6 +161,7 @@ export default function App() {
         <main className="main-content" id="main-content">
           {tab === "pipeline" && (
             <ApplicationsTab
+              key={context.id}
               jobs={jobs}
               context={context}
               add={() => setAdding(true)}
@@ -201,6 +202,7 @@ export default function App() {
               <div className="legacy-content">
                 {tab === "agenda" && (
                   <AgendaTab
+                    key={context.id}
                     jobs={jobs}
                     replaceJob={replaceJob}
                     openDetail={setDetailId}
