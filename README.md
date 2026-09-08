@@ -19,7 +19,7 @@ La aplicación está en `http://127.0.0.1:5178`. Para desarrollo, `npm run dev` 
 1. En **Mi contexto → Perfil personal**, revisa datos de contacto, LinkedIn, portfolio, disponibilidad, permiso de trabajo y trayectoria. Estos datos son comunes a tus búsquedas.
 2. En **Lo que busco**, configura puestos, ubicaciones, remoto/híbrido/presencial, movilidad, salario mínimo y objetivo, empresas excluidas y otras prioridades.
 3. En **Instrucciones**, define cómo evaluar ofertas y redactar. **Nuevo contexto** permite separar distintas búsquedas. Cada candidatura conserva su contexto original aunque cambies el selector.
-4. En **Fuentes**, enlaza archivos, carpetas, notas o enlaces web. Las fuentes de una búsqueda no se consultan desde otra. La IA solo lee; no puede modificar los originales.
+4. En **Fuentes**, usa **Elegir carpeta** o **Elegir archivo** para abrir el selector de Windows; el nombre se completa al seleccionar. También puedes pegar una ruta, escribir notas o enlazar páginas web. Las fuentes de una búsqueda no se consultan desde otra. La IA solo lee; no puede modificar los originales.
 5. En **Respuestas**, guarda respuestas verificadas a preguntas repetidas. Lo desconocido queda pendiente; no se inventa.
 
 Los archivos PDF con texto, DOCX, Markdown, texto, CSV/TSV y archivos de código admitidos se leen en su versión actual. Una carpeta se consulta bajo demanda. El sistema excluye archivos ocultos, directorios de dependencias y nombres habituales de credenciales. No sigue enlaces que escapen de una carpeta autorizada. Estas exclusiones no sustituyen elegir cuidadosamente qué carpeta enlazar.

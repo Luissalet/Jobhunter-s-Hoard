@@ -60,6 +60,7 @@ export default function WorkspaceTab({
     [profile, setProfile] = useState(state.profile),
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
+    [picking, setPicking] = useState(false),
     [source, setSource] = useState(emptySource),
     [showSource, setShowSource] = useState(false),
     [sourcePreview, setSourcePreview] = useState(null),
@@ -103,6 +104,10 @@ export default function WorkspaceTab({
   };
   const addSource = async (e) => {
     e.preventDefault();
+    if (["file", "folder"].includes(source.kind) && !source.path.trim()) {
+      notify("Elige primero un archivo o una carpeta.");
+      return;
+    }
     setBusy(true);
     try {
       await api.workspace(
@@ -118,6 +123,24 @@ export default function WorkspaceTab({
       notify(e.message);
     } finally {
       setBusy(false);
+    }
+  };
+  const browseSource = async () => {
+    setPicking(true);
+    const kind = source.kind;
+    try {
+      const selected = await api.workspace("/api/sources/pick", "POST", { kind });
+      if (!selected.cancelled) {
+        setSource((s) => s.kind === kind ? {
+          ...s,
+          path: selected.path,
+          label: s.label || selected.label,
+        } : s);
+      }
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setPicking(false);
     }
   };
   const sourceAction = async (s, action) => {
@@ -570,8 +593,9 @@ export default function WorkspaceTab({
                   <Field label="Tipo de fuente">
                     <select
                       value={source.kind}
+                      disabled={picking}
                       onChange={(e) =>
-                        setSource((s) => ({ ...s, kind: e.target.value }))
+                        setSource((s) => ({ ...s, kind: e.target.value, path: "" }))
                       }
                     >
                       <option value="folder">Carpeta local</option>
@@ -612,16 +636,23 @@ export default function WorkspaceTab({
                   </Field>
                 </div>
                 {["file", "folder"].includes(source.kind) && (
-                  <Field
-                    label="Ruta completa en este equipo"
-                    required
-                    value={source.path}
-                    onChange={(e) =>
-                      setSource((s) => ({ ...s, path: e.target.value }))
-                    }
-                    placeholder="C:\Users\…\CVs actualizados"
-                    hint="PDF, DOCX, Markdown, texto y código. Las carpetas se consultan bajo demanda."
-                  />
+                  <div className="source-picker">
+                    <button type="button" className="btn-primary" onClick={browseSource} disabled={picking}>
+                      <Icon name={source.kind === "folder" ? "folder" : "file"} />
+                      {picking ? "Selector abierto en Windows…" : source.path ? "Cambiar selección…" : source.kind === "folder" ? "Elegir carpeta…" : "Elegir archivo…"}
+                    </button>
+                    <p role="status" className="source-picker-path">
+                      {picking ? "Elige la fuente en la ventana de Windows. También puedes cancelar allí." : source.path || "Se abrirá el explorador de Windows. El nombre se rellenará al elegir la fuente."}
+                    </p>
+                    <details>
+                      <summary>Introducir ruta manualmente</summary>
+                      <Field label="Ruta completa en este equipo" value={source.path} disabled={picking}
+                        onChange={(e) => setSource((s) => ({ ...s, path: e.target.value }))}
+                        placeholder="C:\Users\…\CVs actualizados"
+                        hint="PDF, DOCX, Markdown, texto y código. Las carpetas se consultan bajo demanda."
+                      />
+                    </details>
+                  </div>
                 )}
                 {source.kind === "url" && (
                   <Field
@@ -673,7 +704,7 @@ export default function WorkspaceTab({
                   >
                     Cancelar
                   </button>
-                  <button className="btn-primary" disabled={busy}>
+                  <button className="btn-primary" disabled={busy || picking}>
                     {busy ? "Enlazando…" : "Guardar fuente"}
                   </button>
                 </div>
