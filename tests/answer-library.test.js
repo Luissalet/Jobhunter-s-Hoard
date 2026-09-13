@@ -294,4 +294,10 @@ test("id migration on load does not reassign ids on a later restart", async () =
   );
   assert.match(first, /^[0-9a-f-]{36}$/);
   assert.equal(first, second);
+  const scope = await run(
+    `import * as store from ${JSON.stringify(pathToFileURL(path.join(root, "server/store.js")).href)};
+     console.log(store.getContext("legacy").answers[0].scope);`,
+  );
+  // Las respuestas anteriores a la biblioteca son del perfil, no de un formulario.
+  assert.equal(scope, "profile");
 });
