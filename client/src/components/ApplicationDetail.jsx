@@ -378,6 +378,40 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
                 </div>
               ))
             )}
+            <h3>Respuestas de la empresa</h3>
+            {!job.responses?.length ? (
+              <p>Sin respuestas registradas todavía.</p>
+            ) : (
+              job.responses.map((r) => (
+                <div className="activity-entry" key={r.id}>
+                  <strong>
+                    {
+                      {
+                        ack: "Acuse de recibo",
+                        info_request: "Petición de información",
+                        rejection: "Rechazo",
+                        interview: "Entrevista",
+                        offer: "Oferta",
+                        unknown: "Sin clasificar",
+                      }[r.kind] || r.kind
+                    }
+                  </strong>
+                  <time>{new Date(r.receivedAt).toLocaleString("es-ES")}</time>
+                  <p>
+                    {r.evidence.length > 280
+                      ? `${r.evidence.slice(0, 280)}…`
+                      : r.evidence}
+                  </p>
+                  {r.interviewAt && (
+                    <p>
+                      Entrevista: {new Date(r.interviewAt).toLocaleString("es-ES")}
+                      {r.timezone ? ` (${r.timezone})` : ""}
+                    </p>
+                  )}
+                  {r.notes && <p>{r.notes}</p>}
+                </div>
+              ))
+            )}
             <h3>Historial de candidatura</h3>
             {job.history.map((h, i) => (
               <div className="history-row" key={i}>
