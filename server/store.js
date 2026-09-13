@@ -66,9 +66,14 @@ function ensureLoaded() {
   // campo. Queda en memoria hasta el primer save() posterior (no fuerza
   // escritura aquí para que leer el store nunca tenga efectos secundarios
   // en disco).
+  // Una respuesta sin `scope` es anterior a la biblioteca: la escribió el
+  // usuario en su perfil, así que es `profile` (nunca `application`, que es
+  // el valor por defecto SOLO para lo que llega desde un formulario).
   for (const context of db.contexts)
-    for (const answer of context.answers || [])
+    for (const answer of context.answers || []) {
       answer.id ??= crypto.randomUUID();
+      answer.scope ??= "profile";
+    }
   db.activeContextId ??= db.contexts[0]?.id;
   for (const job of db.jobs) job.contextId ??= "default";
   // merge de settings nuevos que no existieran
