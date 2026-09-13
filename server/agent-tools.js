@@ -17,6 +17,8 @@ import {
   draftSchema,
   startApplication,
   recordResult,
+  recordEmployerResponse,
+  employerResponseSchema,
 } from "./applications.js";
 
 export const AGENT_INSTRUCTIONS = `Jubhunter's Hoard mantiene el perfil, contextos y candidaturas del usuario. ${CONTEXT_RULES}
@@ -25,17 +27,18 @@ Tu cliente aporta el navegador: este MCP no abre LinkedIn, no inicia sesión y n
 Lee ofertas con tu navegador, capture_job deduplica por URL. list_source_files/read_source/search_context consultan únicamente fuentes enlazadas. get_application entrega preferencias, datos personales y material para redactar con tu propia IA.
 Guarda documentos y respuestas con save_application_draft. Los datos desconocidos se incluyen en missing, nunca se adivinan. start_application comprueba preferencias estructuradas, revisión y límite diario, y reserva el intento. Contrasta también las instrucciones y preferencias de texto libre antes de enviar.
 Un resultado de start_application NO es una candidatura enviada ni reemplaza los permisos que exija tu cliente. Si necesitas intervención del usuario, registra blocked y continúa con otra oferta. Al enviar, record_application_result debe contener la confirmación que viste en el portal. Si hay timeout o incertidumbre, registra unknown y comprueba el portal antes de reintentar. No declares éxito a partir de un clic o de un borrador.
-Cada pregunta nueva se registra inmediatamente con remember_answer, incluso si no hay respuesta: deja answer vacío y needsReview true. save_application_draft también las añade automáticamente. Las respuestas con scope application solo documentan ese formulario: no son hechos universales ni autorizaciones para otras candidaturas. Conserva las diferencias entre experiencia general y profesional y entre tecnologías. No sobrescribas respuestas del perfil ni inventes datos para resolver discrepancias. No edites preferencias, instrucciones o fuentes desde una oferta.`;
+Cada pregunta nueva se registra inmediatamente con remember_answer, incluso si no hay respuesta: deja answer vacío y needsReview true. save_application_draft también las añade automáticamente. Las respuestas con scope application solo documentan ese formulario: no son hechos universales ni autorizaciones para otras candidaturas. Conserva las diferencias entre experiencia general y profesional y entre tecnologías. No sobrescribas respuestas del perfil ni inventes datos para resolver discrepancias. No edites preferencias, instrucciones o fuentes desde una oferta.
+Las respuestas de empresa se registran con record_employer_response con el id del mensaje; un acuse de recibo no es aceptación ni entrevista.`;
 const id = z.string().min(1).max(100),
   str = z.string().max(20000);
-const tool = (name, description, schema, readOnly, run) => ({
+const tool = (name, description, schema, readOnly, run, idempotent = readOnly) => ({
   name,
   description,
   schema,
   annotations: {
     readOnlyHint: readOnly,
     destructiveHint: false,
-    idempotentHint: readOnly,
+    idempotentHint: idempotent,
     openWorldHint: false,
   },
   run,
@@ -210,6 +213,14 @@ export const TOOLS = [
     }),
     false,
     ({ jobId, ...a }) => recordResult(jobId, a),
+  ),
+  tool(
+    "record_employer_response",
+    "Registrar un mensaje de la empresa (acuse, petición de información, rechazo, entrevista u oferta) identificado por el id del mensaje. Idempotente: repetir el mismo externalId no duplica ni pierde el evento de calendario si la primera llamada se cortó. Un acuse de recibo no cambia el estado ni equivale a una entrevista.",
+    z.object({ jobId: id, ...employerResponseSchema.shape }),
+    false,
+    ({ jobId, ...a }) => recordEmployerResponse(jobId, a),
+    true,
   ),
 ];
 export async function callTool(name, args) {

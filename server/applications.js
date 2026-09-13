@@ -283,6 +283,90 @@ export function recordResult(id, { attemptId, outcome, evidence, notes = "" }) {
     ...(outcome === "submitted" ? { status: "applied" } : {}),
   });
 }
+// Contrato consumido por Faustus (server/agent-tools.js registra la
+// herramienta MCP; server/workspace-routes.js expone el equivalente REST).
+export const employerResponseSchema = z.object({
+  externalId: z.string().trim().min(1).max(300),
+  kind: z.enum([
+    "ack",
+    "info_request",
+    "rejection",
+    "interview",
+    "offer",
+    "unknown",
+  ]),
+  evidence: z.string().trim().min(1).max(10000),
+  receivedAt: z.string().datetime(),
+  interviewAt: z.string().datetime().optional(),
+  timezone: z.string().max(64).optional(),
+  calendarEventId: z.string().max(200).optional(),
+  notes: z.string().max(2000).optional(),
+});
+const TERMINAL_STATUSES = ["offer", "rejected", "discarded"];
+const KIND_TO_STATUS = { rejection: "rejected", interview: "interview", offer: "offer" };
+export function recordEmployerResponse(jobId, input) {
+  const job = store.getJob(jobId);
+  if (!job) throw Error("La oferta no existe.");
+  const value = employerResponseSchema.parse(input);
+  const responses = job.responses || [];
+  const existingIndex = responses.findIndex((r) => r.externalId === value.externalId);
+  if (existingIndex >= 0) {
+    const existing = responses[existingIndex];
+    // Idempotente: repetir el mismo externalId no cambia nada, salvo que la
+    // llamada anterior se cortó antes de guardar el evento de calendario.
+    if (value.calendarEventId && !existing.calendarEventId) {
+      const linked = { ...existing, calendarEventId: value.calendarEventId };
+      const next = responses.slice();
+      next[existingIndex] = linked;
+      return {
+        job: store.updateJob(jobId, { responses: next }),
+        applied: true,
+        reason: "calendar event linked",
+        response: linked,
+      };
+    }
+    return { job, applied: false, reason: "already recorded", response: existing };
+  }
+  const response = {
+    id: crypto.randomUUID(),
+    externalId: value.externalId,
+    kind: value.kind,
+    evidence: value.evidence,
+    receivedAt: value.receivedAt,
+    interviewAt: value.interviewAt ?? null,
+    timezone: value.timezone ?? null,
+    calendarEventId: value.calendarEventId ?? null,
+    notes: value.notes ?? "",
+    recordedAt: new Date().toISOString(),
+  };
+  const patch = { responses: [...responses, response] };
+  const lastHistoryAt = job.history?.at(-1)?.at;
+  let nextStatus = null;
+  if (TERMINAL_STATUSES.includes(job.status)) {
+    // Un estado terminal solo se revierte ante evidencia posterior a la
+    // última transición registrada y de un tipo que represente avance real.
+    if (
+      KIND_TO_STATUS[value.kind] &&
+      lastHistoryAt &&
+      new Date(value.receivedAt) > new Date(lastHistoryAt)
+    ) {
+      nextStatus = KIND_TO_STATUS[value.kind];
+      response.notes = [response.notes, `overrode terminal state ${job.status}`]
+        .filter(Boolean)
+        .join(" ");
+    }
+  } else if (value.kind === "info_request") {
+    if (job.status === "applied") nextStatus = "answered";
+  } else if (KIND_TO_STATUS[value.kind]) {
+    nextStatus = KIND_TO_STATUS[value.kind];
+  }
+  // ack y unknown nunca cambian el estado: un acuse de recibo no es una
+  // aceptación ni una entrevista.
+  if (nextStatus) patch.status = nextStatus;
+  if (value.kind === "interview" && value.interviewAt)
+    patch.interviewAt = value.interviewAt;
+  return { job: store.updateJob(jobId, patch), applied: true, response };
+}
 const norm = (s) =>
   String(s || "")
     .normalize("NFD")

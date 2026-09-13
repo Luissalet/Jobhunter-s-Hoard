@@ -329,7 +329,7 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
       body: JSON.stringify({ kind: "folder" }),
     });
     assert.equal(crossSitePicker.status, 403);
-    assert.equal(conf.toolCount, 14);
+    assert.equal(conf.toolCount, 15);
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [path.join(root, "server/mcp.js")],
@@ -343,7 +343,7 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
     const client = new Client({ name: "integration-test", version: "1" });
     try {
       await client.connect(transport);
-      assert.equal((await client.listTools()).tools.length, 14);
+      assert.equal((await client.listTools()).tools.length, 15);
       const call = async (name, args = {}) => {
         const out = await client.callTool({ name, arguments: args });
         assert.equal(out.isError, undefined, JSON.stringify(out));
