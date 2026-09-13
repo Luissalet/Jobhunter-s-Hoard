@@ -5,6 +5,7 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import express from "express";
 
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "jobhunt-answers-test-"));
@@ -282,13 +283,13 @@ test("id migration on load does not reassign ids on a later restart", async () =
       child.on("close", (code) => (code === 0 ? resolve(out.trim()) : reject(new Error(err))));
     });
   const first = await run(
-    `import * as store from ${JSON.stringify(path.join(root, "server/store.js"))};
+    `import * as store from ${JSON.stringify(pathToFileURL(path.join(root, "server/store.js")).href)};
      store.listContexts();
      store.updateSettings({});
      console.log(store.getContext("legacy").answers[0].id);`,
   );
   const second = await run(
-    `import * as store from ${JSON.stringify(path.join(root, "server/store.js"))};
+    `import * as store from ${JSON.stringify(pathToFileURL(path.join(root, "server/store.js")).href)};
      console.log(store.getContext("legacy").answers[0].id);`,
   );
   assert.match(first, /^[0-9a-f-]{36}$/);
