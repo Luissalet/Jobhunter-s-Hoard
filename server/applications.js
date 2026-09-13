@@ -179,8 +179,17 @@ export function saveDraft(id, input) {
     };
   if (["inbox", "interested"].includes(job.status)) patch.status = "tailored";
   const updated = store.updateJob(id, patch);
-  learnDraftAnswers(job, draft);
-  return updated;
+  // El borrador ya quedó persistido: un fallo de la biblioteca de
+  // respuestas (contexto inconsistente, error de validación, etc.) nunca
+  // debe hacer perder ni fingir que no se guardó el borrador.
+  let answersLearned = 0,
+    answersError;
+  try {
+    answersLearned = learnDraftAnswers(job, draft);
+  } catch (e) {
+    answersError = e.message;
+  }
+  return { ...updated, answersLearned, answersError };
 }
 export function startApplication(id) {
   const job = store.getJob(id);
