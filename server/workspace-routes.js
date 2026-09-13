@@ -20,9 +20,11 @@ import {
   saveDraft,
 } from "./applications.js";
 import { callTool, TOOLS } from "./agent-tools.js";
+import { recoverHistoricalAnswers } from "./answer-library.js";
 import { pickSource } from "./source-picker.js";
 
 export function installWorkspaceRoutes(app, port) {
+  recoverHistoricalAnswers();
   fs.mkdirSync(store.DATA_DIR, { recursive: true });
   const tokenFile = path.join(store.DATA_DIR, "mcp-token");
   if (!fs.existsSync(tokenFile))

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import Papa from "papaparse";
+import { learnDraftAnswers } from "./answer-library.js";
 import { z } from "zod";
 import * as store from "./store.js";
 import { buildContext, contextFor } from "./context.js";
@@ -81,7 +82,7 @@ export function eligibility(job) {
     );
   if (job.requiresRelocation == null && p.relocate === "no")
     needsReview.push("No está verificado si exige traslado.");
-  if (p.salaryMin != null) {
+  if (p.salaryMin != null && !(p.allowUndisclosedSalary && job.salaryMax == null)) {
     if (
       job.salaryMax == null ||
       job.salaryCurrency !== p.currency ||
@@ -177,7 +178,9 @@ export function saveDraft(id, input) {
       generatedAt: draft.savedAt,
     };
   if (["inbox", "interested"].includes(job.status)) patch.status = "tailored";
-  return store.updateJob(id, patch);
+  const updated = store.updateJob(id, patch);
+  learnDraftAnswers(job, draft);
+  return updated;
 }
 export function startApplication(id) {
   const job = store.getJob(id);
