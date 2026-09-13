@@ -7,7 +7,7 @@ import crypto from "node:crypto";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR =
   process.env.JOBHUNT_DATA_DIR || path.join(__dirname, "..", "data");
-const DB_PATH = path.join(DATA_DIR, "db.json");
+export const DB_PATH = path.join(DATA_DIR, "db.json");
 export const PROFILE_PATH = path.join(DATA_DIR, "profile.md");
 
 const DEFAULT_SETTINGS = {
@@ -61,6 +61,14 @@ function ensureLoaded() {
       answers: [],
     },
   ];
+  // Migración de arranque única y acotada: da id a respuestas antiguas que
+  // no lo tenían. No reasigna ids que ya existan y no toca ningún otro
+  // campo. Queda en memoria hasta el primer save() posterior (no fuerza
+  // escritura aquí para que leer el store nunca tenga efectos secundarios
+  // en disco).
+  for (const context of db.contexts)
+    for (const answer of context.answers || [])
+      answer.id ??= crypto.randomUUID();
   db.activeContextId ??= db.contexts[0]?.id;
   for (const job of db.jobs) job.contextId ??= "default";
   // merge de settings nuevos que no existieran
@@ -79,6 +87,19 @@ export function save() {
   const tmp = DB_PATH + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
   fs.renameSync(tmp, DB_PATH);
+}
+
+// Copia de seguridad del fichero (no del objeto en memoria) antes de una
+// operación de recuperación. Fuerza un save() previo para que la copia
+// refleje el estado real ya persistido. Nombre compatible con Windows: sin
+// ":" en la marca de tiempo.
+export function backupNow() {
+  ensureLoaded();
+  save();
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const dest = `${DB_PATH}.bak-${stamp}`;
+  fs.copyFileSync(DB_PATH, dest);
+  return dest;
 }
 
 export function getSettings() {

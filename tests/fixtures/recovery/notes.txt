@@ -1,0 +1,1 @@
+Fichero que no coincide con ningún patrón: debe ignorarse por completo.
