@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as store from "./store.js";
+import { createRequire } from "node:module";
 import { searchAll, SOURCE_INFO, stripHtml } from "./sources.js";
 import {
   llmJson,
@@ -45,6 +46,19 @@ app.use(express.json({ limit: "5mb" }));
 
 const PORT = process.env.PORT || 5178;
 installWorkspaceRoutes(app, PORT);
+
+// ---------- Salud ----------
+// Sin autenticación ni datos personales: permite distinguir "app apagada" de
+// "adaptador roto" desde un cliente externo (p.ej. Faustus).
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json");
+app.get("/api/health", (req, res) => {
+  res.json({
+    service: "jubhunters-hoard",
+    version,
+    dataDirConfigured: !!process.env.JOBHUNT_DATA_DIR,
+  });
+});
 
 // ---------- Estado ----------
 app.get("/api/state", (req, res) => {
