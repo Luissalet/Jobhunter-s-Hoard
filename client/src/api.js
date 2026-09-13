@@ -5,7 +5,15 @@ async function req(url, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.error || `Error ${res.status}`);
+    // Algunas rutas (p.ej. el conflicto 409 de /answers/:id) devuelven más
+    // que un mensaje; el body completo queda disponible para quien lo
+    // necesite sin romper a quien solo lee err.message.
+    err.status = res.status;
+    err.body = data;
+    throw err;
+  }
   return data;
 }
 

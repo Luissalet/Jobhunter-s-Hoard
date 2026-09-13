@@ -36,6 +36,105 @@ const emptySource = {
   role: "reference",
   enabled: true,
 };
+function AnswerRow({
+  answer: a,
+  job,
+  editing,
+  edit,
+  setEdit,
+  conflict,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onDiscardConflict,
+  onRemove,
+  onCopy,
+}) {
+  const pending = a.needsReview || !a.answer?.trim();
+  const when = a.updatedAt || a.learnedAt;
+  return (
+    <div className="answer-row">
+      <div>
+        <div className="answer-meta">
+          <span className="status-badge">{a.scope === "profile" ? "Perfil" : "Candidatura"}</span>
+          {pending && <span className="status-badge answered">Pendiente</span>}
+          {a.source && <span>{a.source}</span>}
+          {job && (
+            <span>
+              Oferta: {job.title}
+              {job.company ? ` · ${job.company}` : ""}
+            </span>
+          )}
+          {when && <span>{new Date(when).toLocaleDateString()}</span>}
+        </div>
+        {editing ? (
+          <>
+            <Field
+              label="Editar pregunta"
+              value={edit.question}
+              onChange={(e) => setEdit((d) => ({ ...d, question: e.target.value }))}
+            />
+            <Field label="Editar respuesta">
+              <textarea
+                rows="4"
+                value={edit.answer}
+                onChange={(e) => setEdit((d) => ({ ...d, answer: e.target.value }))}
+              />
+            </Field>
+            <label>
+              <input
+                type="checkbox"
+                checked={edit.scope === "profile"}
+                onChange={(e) =>
+                  setEdit((d) => ({
+                    ...d,
+                    scope: e.target.checked ? "profile" : "application",
+                  }))
+                }
+              />{" "}
+              Respuesta de perfil (válida para cualquier candidatura)
+            </label>
+            {conflict && (
+              <p className="supporting-copy">
+                Otra tarea cambió esta respuesta; recarga. Valor actual:{" "}
+                {conflict.current.answer || "(sin respuesta)"}.{" "}
+                <button className="text-action" onClick={onDiscardConflict}>
+                  Recargar
+                </button>
+              </p>
+            )}
+            <div className="form-actions">
+              <button className="btn-primary" onClick={onSaveEdit}>
+                Guardar cambios
+              </button>
+              <button className="btn-ghost" type="button" onClick={onCancelEdit}>
+                Cancelar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <strong>{a.question}</strong>
+            <p>{a.answer || "Sin respuesta todavía."}</p>
+          </>
+        )}
+      </div>
+      {!editing && (
+        <div className="answer-actions">
+          <button className="text-action" onClick={onCopy}>
+            Copiar
+          </button>
+          <button className="text-action" onClick={onStartEdit}>
+            Editar
+          </button>
+          <button className="text-action muted" onClick={onRemove}>
+            Quitar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 const sections = [
   ["profile", "Perfil personal"],
   ["preferences", "Lo que busco"],
@@ -53,12 +152,26 @@ export default function WorkspaceTab({
   onDirty,
 }) {
   const [section, setSection] = useState("profile"),
-    [draft, setDraft] = useState({
-      ...context,
-      preferences: { ...defaults, ...context.preferences },
-      answers: context.answers || [],
-      letters: context.letters || [],
+    // answers ya no viaja dentro de `draft`: cada respuesta se añade, edita
+    // o borra con su propio endpoint (ver más abajo) para que un "Guardar
+    // cambios" nunca reenvíe una copia obsoleta por encima de una edición
+    // más reciente hecha desde otra pestaña o por el asistente.
+    [draft, setDraft] = useState(() => {
+      const { answers: _omit, ...rest } = context;
+      return {
+        ...rest,
+        preferences: { ...defaults, ...context.preferences },
+        letters: context.letters || [],
+      };
     }),
+    [answers, setAnswers] = useState([]),
+    [answersLoading, setAnswersLoading] = useState(false),
+    [onlyPending, setOnlyPending] = useState(false),
+    [editingAnswerId, setEditingAnswerId] = useState(null),
+    [answerEdit, setAnswerEdit] = useState(null),
+    [answerConflict, setAnswerConflict] = useState(null),
+    [recovering, setRecovering] = useState(false),
+    [recoverReport, setRecoverReport] = useState(null),
     [personal, setPersonal] = useState(state.settings.personal),
     [profile, setProfile] = useState(state.profile),
     [dirty, setDirty] = useState(false),
@@ -71,7 +184,6 @@ export default function WorkspaceTab({
     [newOpen, setNewOpen] = useState(false),
     [question, setQuestion] = useState(""),
     [answerQuery, setAnswerQuery] = useState(""),
-    [editingAnswer, setEditingAnswer] = useState(null),
     [answer, setAnswer] = useState("");
   const pendingSource = !!(
     source.label ||
@@ -80,7 +192,8 @@ export default function WorkspaceTab({
     source.content ||
     source.summary
   );
-  const pending = dirty || pendingSource || !!question || !!answer || !!newName;
+  const pending =
+    dirty || pendingSource || !!question || !!answer || !!newName || !!editingAnswerId;
   useUnsavedChanges(pending);
   useEffect(() => {
     onDirty(pending);
@@ -92,6 +205,118 @@ export default function WorkspaceTab({
   };
   const pref = (key, value) =>
     set("preferences", { ...draft.preferences, [key]: value });
+  // Respuestas: cada operación pasa por su propio endpoint y recarga la
+  // lista; nunca viajan dentro del guardado general del contexto.
+  const loadAnswers = async () => {
+    setAnswersLoading(true);
+    try {
+      const res = await api.workspace(`/api/contexts/${context.id}/answers`);
+      setAnswers(res.answers || []);
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setAnswersLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadAnswers();
+    setEditingAnswerId(null);
+    setAnswerConflict(null);
+    setRecoverReport(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.id]);
+  const addAnswer = async () => {
+    try {
+      const res = await api.workspace(`/api/contexts/${context.id}/answers`, "POST", {
+        entry: { question, answer },
+      });
+      setQuestion("");
+      setAnswer("");
+      await loadAnswers();
+      notify(
+        res.added ? "Respuesta añadida." : "Ya existía una respuesta igual; no se duplicó.",
+        "info",
+      );
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+  const startAnswerEdit = (a) => {
+    setEditingAnswerId(a.id);
+    setAnswerEdit({ question: a.question, answer: a.answer, scope: a.scope });
+    setAnswerConflict(null);
+  };
+  const saveAnswerEdit = async (a) => {
+    try {
+      await api.workspace(`/api/contexts/${context.id}/answers/${a.id}`, "PATCH", {
+        ...answerEdit,
+        ifRevision: a.revision ?? 0,
+      });
+      setEditingAnswerId(null);
+      setAnswerEdit(null);
+      setAnswerConflict(null);
+      await loadAnswers();
+      notify("Respuesta actualizada.", "info");
+    } catch (e) {
+      if (e.status === 409 && e.body?.conflict) {
+        setAnswerConflict({ answerId: a.id, current: e.body.current });
+      } else notify(e.message);
+    }
+  };
+  const discardConflict = async () => {
+    setAnswerConflict(null);
+    setEditingAnswerId(null);
+    await loadAnswers();
+  };
+  const removeAnswer = async (a) => {
+    try {
+      await api.workspace(`/api/contexts/${context.id}/answers/${a.id}`, "DELETE");
+      await loadAnswers();
+      notify("Respuesta eliminada.", "info");
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+  const runRecover = async (force) => {
+    setRecovering(true);
+    try {
+      const report = await api.workspace(
+        `/api/contexts/${context.id}/answers/recover${force ? "?force=1" : ""}`,
+        "POST",
+        {},
+      );
+      setRecoverReport(report);
+      await loadAnswers();
+      notify(`Recuperación completada: ${report.added} respuesta(s) nueva(s).`, "info");
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setRecovering(false);
+    }
+  };
+  const answerKey = (s) =>
+    String(s || "")
+      .normalize("NFKC")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLocaleLowerCase()
+      .replace(/[¿?*]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  const answerGroups = (() => {
+    const q = answerQuery.toLocaleLowerCase();
+    const visible = answers.filter((a) => {
+      if (onlyPending && !(a.needsReview || !a.answer?.trim())) return false;
+      return `${a.question} ${a.answer}`.toLocaleLowerCase().includes(q);
+    });
+    const byKey = new Map();
+    for (const a of visible) {
+      const k = answerKey(a.question);
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k).push(a);
+    }
+    return [...byKey.values()];
+  })();
   const save = async () => {
     setBusy(true);
     try {
@@ -471,44 +696,95 @@ export default function WorkspaceTab({
         )}
         {section === "answers" && (
           <>
-            <div className="editor-heading">
-              <h2>Responder una vez</h2>
-              <p>
-                Guarda respuestas verificadas a las preguntas que se repiten. Si
-                una oferta pregunta algo distinto, la IA debe comprobarlo.
-              </p>
-            </div>
-            <label className="search-field answer-search"><Icon name="search" /><input aria-label="Buscar respuestas" placeholder="Buscar por pregunta o respuesta" value={answerQuery} onChange={(e) => setAnswerQuery(e.target.value)} /></label>
-            <p className="supporting-copy">{draft.answers.filter((a) => `${a.question} ${a.answer}`.toLocaleLowerCase().includes(answerQuery.toLocaleLowerCase())).length} de {draft.answers.length} respuestas</p>
-            {draft.answers.map((a, i) => (editingAnswer === i || `${a.question} ${a.answer}`.toLocaleLowerCase().includes(answerQuery.toLocaleLowerCase())) && (
-              <div className="answer-row" key={i}>
-                <div>
-                  {editingAnswer === i ? <>
-                    <Field label="Editar pregunta" value={a.question} onChange={(e) => set("answers", draft.answers.map((item, index) => index === i ? { ...item, question: e.target.value } : item))} />
-                    <Field label="Editar respuesta"><textarea rows="4" value={a.answer} onChange={(e) => set("answers", draft.answers.map((item, index) => index === i ? { ...item, answer: e.target.value } : item))} /></Field>
-                    <button className="text-action" onClick={() => setEditingAnswer(null)}>Terminar edición</button>
-                  </> : <><strong>{a.question}</strong><p>{a.answer}</p></>}
-                </div>
-                <div className="answer-actions">
-                <button className="text-action" onClick={async () => {
-                  try { await navigator.clipboard.writeText(a.answer); notify("Respuesta copiada.", "info"); }
-                  catch { notify("No se pudo copiar. Selecciona el texto y cópialo manualmente."); }
-                }}>Copiar</button>
-                <button className="text-action" onClick={() => setEditingAnswer(i)}>Editar</button>
-                <button
-                  className="text-action muted"
-                  onClick={() =>
-                    set(
-                      "answers",
-                      draft.answers.filter((_, idx) => idx !== i),
-                    )
-                  }
-                >
-                  Quitar
-                </button>
-                </div>
+            <div className="editor-heading with-action">
+              <div>
+                <h2>Responder una vez</h2>
+                <p>
+                  Guarda respuestas verificadas a las preguntas que se repiten. Si
+                  una oferta pregunta algo distinto, la IA debe comprobarlo.
+                </p>
               </div>
-            ))}
+              <button className="btn-ghost" disabled={recovering} onClick={() => runRecover(false)}>
+                {recovering ? "Recuperando…" : "Recuperar de borradores"}
+              </button>
+            </div>
+            {recoverReport && (
+              <section className="inline-panel">
+                <p>
+                  {recoverReport.contexts} contexto(s) revisados · {recoverReport.jobsScanned}{" "}
+                  ofertas · {recoverReport.draftsScanned} borradores con datos guardados.
+                </p>
+                <p>
+                  {recoverReport.added} respuesta(s) nueva(s) · {recoverReport.skippedDuplicates}{" "}
+                  ya existían · {recoverReport.skippedDeleted} se habían borrado antes y no se
+                  han repuesto.
+                </p>
+                <p className="source-picker-path">Copia de seguridad: {recoverReport.backup}</p>
+                {recoverReport.added === 0 && (
+                  <button className="text-action" disabled={recovering} onClick={() => runRecover(true)}>
+                    Forzar otra pasada
+                  </button>
+                )}
+              </section>
+            )}
+            <label className="search-field answer-search">
+              <Icon name="search" />
+              <input
+                aria-label="Buscar respuestas"
+                placeholder="Buscar por pregunta o respuesta"
+                value={answerQuery}
+                onChange={(e) => setAnswerQuery(e.target.value)}
+              />
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={onlyPending}
+                onChange={(e) => setOnlyPending(e.target.checked)}
+              />{" "}
+              Solo pendientes
+            </label>
+            <p className="supporting-copy">
+              {answersLoading
+                ? "Cargando respuestas…"
+                : `${answerGroups.reduce((n, g) => n + g.length, 0)} de ${answers.length} respuestas`}
+            </p>
+            {answerGroups.map((group) => {
+              const rows = group.map((a) => (
+                <AnswerRow
+                  key={a.id}
+                  answer={a}
+                  job={a.jobId ? state.jobs.find((j) => j.id === a.jobId) : null}
+                  editing={editingAnswerId === a.id}
+                  edit={answerEdit}
+                  setEdit={setAnswerEdit}
+                  conflict={answerConflict?.answerId === a.id ? answerConflict : null}
+                  onStartEdit={() => startAnswerEdit(a)}
+                  onCancelEdit={() => {
+                    setEditingAnswerId(null);
+                    setAnswerConflict(null);
+                  }}
+                  onSaveEdit={() => saveAnswerEdit(a)}
+                  onDiscardConflict={discardConflict}
+                  onRemove={() => removeAnswer(a)}
+                  onCopy={async () => {
+                    try {
+                      await navigator.clipboard.writeText(a.answer);
+                      notify("Respuesta copiada.", "info");
+                    } catch {
+                      notify("No se pudo copiar. Selecciona el texto y cópialo manualmente.");
+                    }
+                  }}
+                />
+              ));
+              if (group.length === 1) return rows[0];
+              return (
+                <details className="answer-variants" key={group[0].id}>
+                  <summary>{group.length} variantes de "{group[0].question}"</summary>
+                  {rows}
+                </details>
+              );
+            })}
             <Field
               label="Pregunta habitual"
               value={question}
@@ -516,21 +792,9 @@ export default function WorkspaceTab({
               placeholder="¿Cuándo podrías incorporarte?"
             />
             <Field label="Tu respuesta">
-              <textarea
-                rows="3"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-              />
+              <textarea rows="3" value={answer} onChange={(e) => setAnswer(e.target.value)} />
             </Field>
-            <button
-              className="btn-ghost"
-              disabled={!question.trim() || !answer.trim()}
-              onClick={() => {
-                set("answers", [...draft.answers, { question, answer }]);
-                setQuestion("");
-                setAnswer("");
-              }}
-            >
+            <button className="btn-ghost" disabled={!question.trim() || !answer.trim()} onClick={addAnswer}>
               <Icon name="plus" />
               Añadir respuesta
             </button>
