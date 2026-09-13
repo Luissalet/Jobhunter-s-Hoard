@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { rememberAnswer, answerSchema } from "./answer-library.js";
 import * as store from "./store.js";
 import {
   contextFor,
@@ -24,7 +25,7 @@ Tu cliente aporta el navegador: este MCP no abre LinkedIn, no inicia sesión y n
 Lee ofertas con tu navegador, capture_job deduplica por URL. list_source_files/read_source/search_context consultan únicamente fuentes enlazadas. get_application entrega preferencias, datos personales y material para redactar con tu propia IA.
 Guarda documentos y respuestas con save_application_draft. Los datos desconocidos se incluyen en missing, nunca se adivinan. start_application comprueba preferencias estructuradas, revisión y límite diario, y reserva el intento. Contrasta también las instrucciones y preferencias de texto libre antes de enviar.
 Un resultado de start_application NO es una candidatura enviada ni reemplaza los permisos que exija tu cliente. Si necesitas intervención del usuario, registra blocked y continúa con otra oferta. Al enviar, record_application_result debe contener la confirmación que viste en el portal. Si hay timeout o incertidumbre, registra unknown y comprueba el portal antes de reintentar. No declares éxito a partir de un clic o de un borrador.
-No edites preferencias, instrucciones, fuentes o respuestas permanentes desde una oferta: esos cambios se hacen en la interfaz por el usuario.`;
+Cada pregunta nueva se registra inmediatamente con remember_answer, incluso si no hay respuesta: deja answer vacío y needsReview true. save_application_draft también las añade automáticamente. Las respuestas con scope application solo documentan ese formulario: no son hechos universales ni autorizaciones para otras candidaturas. Conserva las diferencias entre experiencia general y profesional y entre tecnologías. No sobrescribas respuestas del perfil ni inventes datos para resolver discrepancias. No edites preferencias, instrucciones o fuentes desde una oferta.`;
 const id = z.string().min(1).max(100),
   str = z.string().max(20000);
 const tool = (name, description, schema, readOnly, run) => ({
@@ -40,6 +41,7 @@ const tool = (name, description, schema, readOnly, run) => ({
   run,
 });
 export const TOOLS = [
+  tool("remember_answer", "Añadir una pregunta nueva a la colección sin sobrescribir respuestas existentes. Dejar answer vacío si falta el dato; scope application para respuestas específicas del formulario.", z.object({ contextId: id, entry: answerSchema }), false, ({ contextId, entry }) => rememberAnswer(contextId, entry)),
   tool(
     "list_contexts",
     "Listar búsquedas y contexto activo, sin datos personales.",

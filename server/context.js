@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { z } from "zod";
 import * as store from "./store.js";
+import { answerSchema } from "./answer-library.js";
 
 const text = z.string().max(20000);
 export const preferencesSchema = z.object({
@@ -14,6 +15,7 @@ export const preferencesSchema = z.object({
   relocate: z.enum(["yes", "no", "ask"]).default("ask"),
   salaryMin: z.number().nonnegative().nullable().default(null),
   salaryTarget: z.number().nonnegative().nullable().default(null),
+  allowUndisclosedSalary: z.boolean().default(false),
   currency: z.string().length(3).default("EUR"),
   excludedCompanies: text.default(""),
   automation: z.enum(["review", "automatic"]).default("review"),
@@ -27,9 +29,9 @@ export const contextSchema = z.object({
   preferences: preferencesSchema.default({}),
   answers: z
     .array(
-      z.object({ question: z.string().trim().min(1).max(500), answer: text }),
+      answerSchema,
     )
-    .max(100)
+    .max(2000)
     .default([]),
   letters: z.array(z.object({
     id: z.string().min(1).max(100),
