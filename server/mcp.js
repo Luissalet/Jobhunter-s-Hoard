@@ -7,7 +7,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { TOOLS, AGENT_INSTRUCTIONS } from "./agent-tools.js";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const base = process.env.JOBHUNT_URL || "http://127.0.0.1:5178";
+const base = process.env.JOBHUNT_URL || "http://127.0.0.1:5179";
 const parsed = new URL(base);
 if (
   !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname) ||

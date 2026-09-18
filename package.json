@@ -5,11 +5,12 @@
   "type": "module",
   "description": "Contextos, fuentes y seguimiento local de candidaturas para asistentes con MCP.",
   "scripts": {
-    "dev": "concurrently -k -n server,client -c blue,green \"npm:server\" \"npm:client\"",
+    "dev": "node scripts/dev.mjs",
     "server": "node --watch server/index.js",
     "client": "vite",
     "build": "vite build",
     "start": "node server/index.js",
+    "open": "node scripts/launch.mjs",
     "test": "node --test tests/*.test.js",
     "mcp": "node server/mcp.js"
   },
