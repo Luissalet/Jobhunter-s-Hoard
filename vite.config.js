@@ -10,9 +10,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    host: '127.0.0.1',
+    port: Number(process.env.VITE_PORT || 5173),
     proxy: {
-      '/api': 'http://localhost:5178',
+      '/api': `http://127.0.0.1:${process.env.JOBHUNT_API_PORT || process.env.PORT || 5178}`,
     },
   },
 });

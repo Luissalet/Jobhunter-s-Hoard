@@ -17,6 +17,7 @@ import { renderDocPage } from "./render.js";
 import { installWorkspaceRoutes } from "./workspace-routes.js";
 import { contextPrompt, CONTEXT_RULES } from "./context.js";
 import { captureJob } from "./applications.js";
+import { findAvailablePort, validPort } from "./port.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -44,7 +45,10 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: "5mb" }));
 
-const PORT = process.env.PORT || 5178;
+const PREFERRED_PORT = validPort(process.env.PORT, 5178);
+const PORT = process.env.PORT_STRICT === "1"
+  ? PREFERRED_PORT
+  : await findAvailablePort(PREFERRED_PORT);
 installWorkspaceRoutes(app, PORT);
 
 // ---------- Salud ----------
@@ -425,6 +429,12 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`⚡ Jubhunter's Hoard server en http://localhost:${PORT}`);
+const server = app.listen(PORT, "127.0.0.1", () => {
+  if (PORT !== PREFERRED_PORT)
+    console.log(`Puerto ${PREFERRED_PORT} ocupado; usando ${PORT}.`);
+  console.log(`⚡ Jubhunter's Hoard server en http://127.0.0.1:${PORT}`);
+});
+server.on("error", (error) => {
+  console.error(`No se pudo iniciar Jubhunter: ${error.message}`);
+  process.exitCode = 1;
 });

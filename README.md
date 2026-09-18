@@ -12,7 +12,7 @@ npm run build
 npm start
 ```
 
-La aplicación está en `http://127.0.0.1:5178`. Para desarrollo, `npm run dev` inicia también Vite (puerto 5173, o 5174 si está ocupado).
+La aplicación intenta abrirse en `http://127.0.0.1:5178`. Si el puerto está ocupado, avanza automáticamente hasta encontrar uno libre y muestra la dirección elegida. En Windows, el lanzador abre esa dirección exacta. Para desarrollo, `npm run dev` elige de forma coordinada un puerto para Vite y otro para la API, y configura el proxy sin intervención manual.
 
 ## Preparar tu espacio
 
