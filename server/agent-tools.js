@@ -44,7 +44,7 @@ const tool = (name, description, schema, readOnly, run, idempotent = readOnly) =
   run,
 });
 export const TOOLS = [
-  tool("remember_answer", "Añadir una pregunta nueva a la colección sin sobrescribir respuestas existentes. Dejar answer vacío si falta el dato; scope application para respuestas específicas del formulario.", z.object({ contextId: id, entry: answerSchema }), false, ({ contextId, entry }) => rememberAnswer(contextId, entry)),
+  tool("remember_answer", "Añadir una pregunta nueva a la colección de respuestas sin sobrescribir las existentes. Remember an answer.\nAñadir una pregunta nueva a la colección sin sobrescribir respuestas existentes. Dejar answer vacío si falta el dato; scope application para respuestas específicas del formulario.", z.object({ contextId: id, entry: answerSchema }), false, ({ contextId, entry }) => rememberAnswer(contextId, entry)),
   tool(
     "list_contexts",
     "Listar búsquedas y contexto activo, sin datos personales.",
@@ -59,7 +59,7 @@ export const TOOLS = [
   ),
   tool(
     "get_context",
-    "Leer perfil, preferencias, instrucciones, respuestas y referencias de una búsqueda. No incluye claves del proveedor.",
+    "Leer perfil, preferencias, instrucciones, respuestas y referencias de una búsqueda. Get context.\nLeer perfil, preferencias, instrucciones, respuestas y referencias de una búsqueda. No incluye claves del proveedor.",
     z.object({ contextId: id }),
     true,
     ({ contextId }) => buildContext(contextId),
@@ -82,7 +82,7 @@ export const TOOLS = [
   ),
   tool(
     "read_source",
-    "Leer texto actual de una fuente o archivo dentro de una carpeta enlazada. PDF, DOCX, texto y código. Paginado por caracteres.",
+    "Leer el texto de una fuente o archivo de una carpeta enlazada (PDF, DOCX, texto, código). Read source.\nLeer texto actual de una fuente o archivo dentro de una carpeta enlazada. PDF, DOCX, texto y código. Paginado por caracteres.",
     z.object({
       contextId: id,
       sourceId: id,
@@ -153,7 +153,7 @@ export const TOOLS = [
   ),
   tool(
     "update_job_facts",
-    "Actualizar hechos verificados de la oferta. No cambia historial, contexto, estado de envío ni datos personales.",
+    "Actualizar hechos verificados de la oferta; nunca historial, contexto ni estado. Update job facts.\nActualizar hechos verificados de la oferta. No cambia historial, contexto, estado de envío ni datos personales.",
     z.object({
       jobId: id,
       description: str.optional(),
@@ -182,7 +182,7 @@ export const TOOLS = [
   ),
   tool(
     "get_application",
-    "Obtener dossier para preparar una candidatura: oferta, contexto, documentos, preferencias, borrador, pendientes e historial.",
+    "Obtener el dossier de una candidatura: oferta, contexto, documentos, borrador, historial. Get application.\nObtener dossier para preparar una candidatura: oferta, contexto, documentos, preferencias, borrador, pendientes e historial.",
     z.object({ jobId: id }),
     true,
     (a) => prepareApplication(a.jobId),
@@ -196,14 +196,14 @@ export const TOOLS = [
   ),
   tool(
     "start_application",
-    "Reservar un intento antes de rellenar/enviar con el navegador. Rechaza duplicados, incertidumbre, restricciones y falta de revisión.",
+    "Reservar un intento de candidatura antes de rellenar o enviar con el navegador. Start application.\nReservar un intento antes de rellenar/enviar con el navegador. Rechaza duplicados, incertidumbre, restricciones y falta de revisión.",
     z.object({ jobId: id }),
     false,
     (a) => startApplication(a.jobId),
   ),
   tool(
     "record_application_result",
-    "Registrar resultado observado de un intento. submitted requiere confirmación visible; blocked o unknown no marcan aplicada.",
+    "Registrar el resultado observado de un intento de candidatura. Record application result.\nRegistrar resultado observado de un intento. submitted requiere confirmación visible; blocked o unknown no marcan aplicada.",
     z.object({
       jobId: id,
       attemptId: id,
@@ -216,7 +216,7 @@ export const TOOLS = [
   ),
   tool(
     "record_employer_response",
-    "Registrar un mensaje de la empresa (acuse, petición de información, rechazo, entrevista u oferta) identificado por el id del mensaje. Idempotente: repetir el mismo externalId no duplica ni pierde el evento de calendario si la primera llamada se cortó. Un acuse de recibo no cambia el estado ni equivale a una entrevista.",
+    "Registrar un mensaje de la empresa: acuse, rechazo, entrevista u oferta. Record employer response.\nRegistrar un mensaje de la empresa (acuse, petición de información, rechazo, entrevista u oferta) identificado por el id del mensaje. Idempotente: repetir el mismo externalId no duplica ni pierde el evento de calendario si la primera llamada se cortó. Un acuse de recibo no cambia el estado ni equivale a una entrevista.",
     z.object({ jobId: id, ...employerResponseSchema.shape }),
     false,
     ({ jobId, ...a }) => recordEmployerResponse(jobId, a),
