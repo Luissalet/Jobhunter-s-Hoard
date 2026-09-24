@@ -94,7 +94,11 @@ La exportación CSV incluye modalidad y contexto; neutraliza fórmulas procedent
 
 Variables opcionales: `PORT`, `JOBHUNT_DATA_DIR`; adaptador MCP: `JOBHUNT_URL`, `JOBHUNT_TOKEN_FILE` o `JOBHUNT_TOKEN`. `JOBHUNT_URL` debe ser local.
 
-`GET /api/health` responde `{service, version, dataDirConfigured}` sin autenticación ni datos personales, para que un supervisor externo distinga la aplicación apagada de un adaptador roto.
+`GET /api/health` responde `{service, version, dataDirConfigured, hoard_link}` sin autenticación ni datos personales, para que un supervisor externo distinga la aplicación apagada de un adaptador roto.
+
+### En la familia de Hoards (Hoard Hub)
+
+La app sigue el contrato de la familia: `faustus-plugin.json` en la raíz (Faustus y el Hoard Hub la descubren con él), `GET /api/agent/tools` (el catálogo en JSON Schema más las instrucciones), `POST /api/agent/call` con `Authorization: Bearer <data/mcp-token>` y `{name, arguments, caller}`, y un evento `agent.call` por llamada en el bus del hub (`server/hoard-link.js`, copia de la librería del hub; `HOARD_EVENTS=0` lo silencia, `HOARD_HUB_URL` cambia el hub). Así una regla del hub o cualquier otra app de la familia puede consultar candidaturas y contextos sin conocer este puerto ni este token.
 
 ## Verificación
 

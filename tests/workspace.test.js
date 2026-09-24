@@ -300,6 +300,19 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
     assert.equal(health.service, "jubhunters-hoard");
     assert.equal(typeof health.version, "string");
     assert.equal(health.dataDirConfigured, true);
+    // the Hoard family contract: health block, catalogue, bearer-token call
+    assert.equal(health.hoard_link.app, "jobhunter");
+    const catalog = await (await fetch(base + "/api/agent/tools")).json();
+    assert.ok(catalog.tools.length > 3 && catalog.instructions.length > 20);
+    assert.ok(catalog.tools.every((t) => t.inputSchema && t.inputSchema.type === "object" && "readOnlyHint" in t.annotations));
+    const token = (await fs.readFile(path.join(data, "mcp-token"), "utf8")).trim();
+    const listed = await fetch(base + "/api/agent/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: "list_contexts", arguments: {}, caller: "test" }),
+    });
+    assert.equal(listed.status, 200);
+    assert.ok(Array.isArray((await listed.json()).contexts));
     assert.equal(
       (
         await fetch(base + "/api/state", {
