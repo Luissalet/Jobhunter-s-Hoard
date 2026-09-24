@@ -15,6 +15,7 @@ import {
 } from "./llm.js";
 import { renderDocPage } from "./render.js";
 import { installWorkspaceRoutes } from "./workspace-routes.js";
+import * as family from "./hoard-link.js";
 import { contextPrompt, CONTEXT_RULES } from "./context.js";
 import { captureJob } from "./applications.js";
 import { findAvailablePort, validPort } from "./port.js";
@@ -61,6 +62,7 @@ app.get("/api/health", (req, res) => {
     service: "jubhunters-hoard",
     version,
     dataDirConfigured: !!process.env.JOBHUNT_DATA_DIR,
+    hoard_link: family.healthBlock(),
   });
 });
 

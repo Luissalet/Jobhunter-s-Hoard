@@ -20,7 +20,8 @@ import {
   saveDraft,
   recordEmployerResponse,
 } from "./applications.js";
-import { callTool, TOOLS } from "./agent-tools.js";
+import { callTool, TOOLS, AGENT_INSTRUCTIONS } from "./agent-tools.js";
+import * as family from "./hoard-link.js";
 import {
   rememberAnswer,
   listAnswers,
@@ -41,6 +42,9 @@ export function installWorkspaceRoutes(app, port) {
       mode: 0o600,
     });
   const token = fs.readFileSync(tokenFile, "utf8").trim();
+  // The Hoard family: events on the hub's bus (agent.call per call) and the
+  // hoard_link block in /api/health; the token above is this app's voice there.
+  family.configure({ app: "jobhunter", dataDir: store.DATA_DIR, tokenFile });
   let lastCallAt = null;
   const route = (fn) => async (req, res, next) => {
     try {
@@ -49,8 +53,21 @@ export function installWorkspaceRoutes(app, port) {
       next(e);
     }
   };
+  // The family's catalogue: what the MCP bridge lists, as JSON Schema, plus the briefing.
+  app.get("/api/agent/tools", (req, res) => {
+    res.json({
+      instructions: AGENT_INSTRUCTIONS,
+      tools: TOOLS.map((t) => ({
+        name: t.name,
+        description: t.description,
+        annotations: t.annotations,
+        inputSchema: z.toJSONSchema(t.schema, { io: "input" }),
+      })),
+    });
+  });
   app.post(
     "/api/agent/call",
+    family.recordAgentRoute((req, res, next) => next()),
     (req, res, next) => {
       const auth = Buffer.from(req.headers.authorization || ""),
         expected = Buffer.from(`Bearer ${token}`);
