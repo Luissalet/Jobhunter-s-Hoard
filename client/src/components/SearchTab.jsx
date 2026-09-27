@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api, daysAgo } from '../api.js';
+import { searchResultsByFreshness } from '../job-insights.js';
 
 export default function SearchTab({ settings, sources, addJobs, notify, saveSearches }) {
   const [query, setQuery] = useState('');
@@ -7,11 +8,14 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
   const [chosen, setChosen] = useState(() => new Set(sources.filter((s) => !s.needsKey || settings.adzunaAppId).map((s) => s.id)));
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
+  const [ageDays, setAgeDays] = useState(0);
+  const [sortBy, setSortBy] = useState('recent');
   const [errors, setErrors] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [importing, setImporting] = useState(false);
 
   const savedSearches = settings.savedSearches || [];
+  const visibleResults = searchResultsByFreshness(results, ageDays, sortBy);
 
   const runSearch = async (q, loc, srcs) => {
     setLoading(true);
@@ -164,8 +168,24 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
 
       {results.length > 0 && (
         <div className="mx-auto mt-4 max-w-5xl">
-          <div className="mb-2 flex items-center gap-3">
-            <span className="text-sm text-slate-400">{results.length} resultados</span>
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <span className="text-sm text-slate-400">{visibleResults.length} de {results.length} resultados</span>
+            <label className="flex items-center gap-1.5 text-xs text-slate-400">
+              Publicadas
+              <select className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" value={ageDays} onChange={(e) => { setAgeDays(Number(e.target.value)); setSelected(new Set()); }}>
+                <option value={0}>Cualquier fecha</option>
+                <option value={7}>Últimos 7 días</option>
+                <option value={30}>Últimos 30 días</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-400">
+              Orden
+              <select className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="recent">Más recientes</option>
+                <option value="source">Orden de la fuente</option>
+              </select>
+            </label>
+            <span className="text-xs text-slate-500">Las ofertas sin fecha siguen visibles.</span>
             {selected.size > 0 && (
               <button
                 className="btn-primary text-xs"
@@ -176,8 +196,13 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
               </button>
             )}
           </div>
+          {visibleResults.length === 0 && (
+            <p className="rounded-lg border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
+              No hay ofertas con fecha en ese periodo. Amplía el filtro para ver más resultados.
+            </p>
+          )}
           <div className="space-y-2">
-            {results.map((r, i) => (
+            {visibleResults.map(({ job: r, index: i }) => (
               <div
                 key={i}
                 className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
@@ -186,6 +211,7 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
               >
                 <input
                   type="checkbox"
+                  aria-label={`Seleccionar ${r.title} de ${r.company}`}
                   className="mt-1.5 accent-indigo-500"
                   disabled={r.alreadyTracked}
                   checked={selected.has(i)}

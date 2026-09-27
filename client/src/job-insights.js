@@ -1,6 +1,19 @@
 export const submittedStatuses = ["applied", "answered", "interview", "offer", "rejected"];
 export const closedStatuses = ["rejected", "discarded", "offer"];
 export const validDate = (value) => !!value && Number.isFinite(new Date(value).getTime());
+export function searchResultsByFreshness(results, ageDays = 0, sortBy = 'recent', now = new Date()) {
+  const today = now.getTime();
+  const limit = ageDays ? today - ageDays * 86_400_000 : -Infinity;
+  const dated = results.map((job, index) => {
+    const parsed = job.postedAt ? new Date(job.postedAt).getTime() : NaN;
+    const timestamp = Number.isFinite(parsed) && parsed <= today + 86_400_000 ? Math.min(parsed, today) : null;
+    return { job, index, timestamp };
+  }).filter(({ timestamp }) => timestamp === null || timestamp >= limit);
+  if (sortBy === 'recent') {
+    dated.sort((a, b) => (b.timestamp ?? -Infinity) - (a.timestamp ?? -Infinity) || a.index - b.index);
+  }
+  return dated;
+}
 export const wasSubmitted = (job) => submittedStatuses.includes(job.status) || validDate(job.appliedAt) || job.history?.some((entry) => submittedStatuses.includes(entry.status));
 export const hasResponse = (job) => ["answered", "interview", "offer", "rejected"].includes(job.status) || job.history?.some((entry) => ["answered", "interview", "offer", "rejected"].includes(entry.status));
 export function agendaGroups(jobs, now = new Date()) {
