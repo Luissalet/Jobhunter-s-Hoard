@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agendaGroups, jobInsights } from "../client/src/job-insights.js";
+import { agendaGroups, jobInsights, searchResultsByFreshness } from "../client/src/job-insights.js";
 import { renderLetter } from "../client/src/letter-templates.js";
 
 test("letter templates replace repeated variables literally and expose missing values", () => {
@@ -39,4 +39,19 @@ test("agenda includes all of today, excludes closed jobs and exposes unplanned i
   assert.deepEqual(groups.future.map((j) => j.id), ["later"]);
   assert.deepEqual(groups.unplanned.map((j) => j.id), ["import"]);
   assert.deepEqual(groups.interviews.map((j) => j.id), ["interview"]);
+});
+
+test("search freshness keeps unknown dates visible and original import indices stable", () => {
+  const now = new Date("2026-09-27T12:00:00Z");
+  const jobs = [
+    { title: "old", postedAt: "2026-08-01T00:00:00Z" },
+    { title: "undated", postedAt: null },
+    { title: "recent", postedAt: "2026-09-26T12:00:00Z" },
+    { title: "invalid", postedAt: "not a date" },
+    { title: "week", postedAt: "2026-09-21T12:00:00Z" },
+  ];
+  assert.deepEqual(searchResultsByFreshness(jobs, 7, "recent", now).map(({ job, index }) => [job.title, index]),
+    [["recent", 2], ["week", 4], ["undated", 1], ["invalid", 3]]);
+  assert.deepEqual(searchResultsByFreshness(jobs, 7, "source", now).map(({ index }) => index), [1, 2, 3, 4]);
+  assert.deepEqual(searchResultsByFreshness(jobs, 0, "recent", now).map(({ index }) => index), [2, 4, 0, 1, 3]);
 });
