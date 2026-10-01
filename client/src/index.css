@@ -1920,3 +1920,6 @@ h2, h3 { color: var(--hoard-text); }
 .btn, .btn-primary, .btn-ghost, .btn-danger { border-radius: var(--hoard-radius); }
 .status-badge.applied, .status-badge.interview, .status-badge.offer { background: color-mix(in srgb, var(--hoard-success) 16%, transparent); color: color-mix(in srgb, var(--hoard-success) 62%, white); }
 .status-badge.rejected, .status-badge.discarded { background: color-mix(in srgb, var(--hoard-danger) 16%, transparent); color: color-mix(in srgb, var(--hoard-danger) 55%, white); }
+
+/* The app icon as the brand mark (same as the window and taskbar icon). */
+.brand-mark.brand-icon, :root[data-theme="light"] .brand-mark.brand-icon { display: block; width: 32px; height: 32px; padding: 0; border-radius: 8px; background: none; object-fit: cover; flex: none; }
