@@ -63,7 +63,7 @@ export default function App() {
   if (!state)
     return (
       <div className="startup">
-        <span className="brand-mark">j.</span>
+        <img className="brand-mark brand-icon" src="/icon-192.png" alt="" width="32" height="32" />
         <h1>Jubhunter's Hoard</h1>
         <p>{error || "Abriendo tu espacio de trabajo…"}</p>
         {error && (
@@ -103,9 +103,9 @@ export default function App() {
             navigate("pipeline");
           }}
         >
-          <span className="brand-mark">j.</span>
+          <img className="brand-mark brand-icon" src="/icon-192.png" alt="" width="32" height="32" />
           <span>
-            jubhunter's<span className="brand-sub">HOARD</span>
+            jobhunter's<span className="brand-sub">HOARD</span>
           </span>
         </a>
         <div className="space-label">Tu espacio de trabajo</div>
