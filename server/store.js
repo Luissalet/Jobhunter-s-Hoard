@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
+import { writeJsonAtomic, writeTextAtomic } from "./hoard-commons/server.js";
+import { normalizeUrl } from "./hoard-commons/web.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR =
@@ -89,9 +91,7 @@ function ensureLoaded() {
 
 export function save() {
   ensureLoaded();
-  const tmp = DB_PATH + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
-  fs.renameSync(tmp, DB_PATH);
+  writeJsonAtomic(DB_PATH, db);
 }
 
 // Copia de seguridad del fichero (no del objeto en memoria) antes de una
@@ -131,7 +131,7 @@ export function getProfile() {
 
 export function setProfile(markdown) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(PROFILE_PATH, markdown ?? "", "utf8");
+  writeTextAtomic(PROFILE_PATH, markdown ?? "");
 }
 
 export function listJobs() {
@@ -148,21 +148,10 @@ function normKey(s) {
   return (s || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+/** The key two links to the same posting share: the shared URL rules (tracking parameters, fragment, default port, trailing slash,
+ * the "ref" parameter, the LinkedIn job id from /jobs/view/ or currentJobId), or the lowercased text when it is not a web address. */
 export function canonicalUrl(value) {
-  try {
-    const u = new URL(value);
-    const linkedin =
-      (u.hostname === "linkedin.com" || u.hostname.endsWith(".linkedin.com")) &&
-      u.pathname.match(/\/jobs\/view\/(?:[^/]*-)?(\d+)/);
-    if (linkedin) return `https://www.linkedin.com/jobs/view/${linkedin[1]}`;
-    for (const key of [...u.searchParams.keys()])
-      if (/^(utm_|trk|trackingId|refId|ref$)/i.test(key))
-        u.searchParams.delete(key);
-    u.hash = "";
-    return u.toString().replace(/\/$/, "");
-  } catch {
-    return normKey(value);
-  }
+  return normalizeUrl(value, { stripRef: true }) || normKey(value);
 }
 
 export function findDuplicate(candidate) {
