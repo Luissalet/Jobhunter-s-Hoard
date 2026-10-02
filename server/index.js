@@ -4,10 +4,10 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as store from "./store.js";
 import { createRequire } from "node:module";
-import { searchAll, SOURCE_INFO, stripHtml } from "./sources.js";
+import { searchAll, SOURCE_INFO } from "./sources.js";
+import { ingestPosting } from "./ingest.js";
 import {
   llmJson,
-  extractPrompt,
   scorePrompt,
   tailorPrompt,
   followupPrompt,
@@ -116,37 +116,9 @@ app.post("/api/search", async (req, res) => {
 app.post("/api/ingest", async (req, res) => {
   try {
     const { url = "", text = "" } = req.body || {};
-    let raw = text;
-    if (!raw && url) {
-      const r = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (!r.ok)
-        throw new Error(
-          `No pude descargar la página (HTTP ${r.status}). Copia y pega el texto de la oferta.`,
-        );
-      raw = stripHtml(await r.text());
-    }
-    if (!raw?.trim())
-      return res
-        .status(400)
-        .json({ error: "Pega una URL o el texto de la oferta" });
-
-    const extracted = await llmJson(extractPrompt(raw, url), {
-      temperature: 0.2,
-    });
-    const job = store.addJob({
-      ...extracted,
-      url: url || extracted.applyUrl || "",
-      source: url ? new URL(url).hostname.replace("www.", "") : "pegado",
-    });
-    res.json(job);
+    res.json(await ingestPosting({ url: String(url), text: String(text) }));
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(e.status === 400 ? 400 : 500).json({ error: e.message });
   }
 });
 
