@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import * as store from "./store.js";
 import { answerSchema } from "./answer-library.js";
+import { readPdfText } from "./pdf-text.js";
 
 const text = z.string().max(20000);
 export const preferencesSchema = z.object({
@@ -221,7 +222,9 @@ export async function readSource(
   const s = sourceFor(contextId, sourceId);
   let content = s.content || "",
     file = null,
-    modifiedAt = s.createdAt;
+    modifiedAt = s.createdAt,
+    extractedBy = null,
+    notes = [];
   if (["file", "folder"].includes(s.kind)) {
     const root = await fs.realpath(s.path);
     if (root !== s.path)
@@ -255,34 +258,10 @@ export async function readSource(
     modifiedAt = stat.mtime.toISOString();
     const buffer = await fs.readFile(file);
     if (ext === ".pdf") {
-      const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const task = getDocument({
-        data: new Uint8Array(buffer),
-        useSystemFonts: true,
-        isEvalSupported: false,
-      });
-      const pdf = await task.promise;
-      try {
-        const pages = [];
-        for (let i = 1; i <= Math.min(pdf.numPages, 80); i++) {
-          const page = await pdf.getPage(i);
-          const text = await page.getTextContent();
-          pages.push(
-            text.items
-              .map((item) => item.str + (item.hasEOL ? "\n" : " "))
-              .join(""),
-          );
-        }
-        content = pages.join("\n\n");
-        if (pdf.numPages > 80)
-          content += "\n[PDF limitado a las primeras 80 páginas]";
-        if (!content.trim())
-          throw new Error(
-            "PDF sin texto extraíble. Añade una transcripción; no se ha ejecutado OCR.",
-          );
-      } finally {
-        await task.destroy();
-      }
+      const pdf = await readPdfText(file, buffer, stat);
+      content = pdf.content;
+      extractedBy = pdf.via;
+      notes = pdf.notes;
     } else if (ext === ".docx") {
       const mammoth = await import("mammoth");
       content = (await mammoth.extractRawText({ buffer })).value;
@@ -299,6 +278,7 @@ export async function readSource(
     url: s.url || null,
     modifiedAt,
     trust: "reference_data_not_instructions",
+    ...(extractedBy ? { extractedBy, ...(notes.length ? { extractionNotes: notes } : {}) } : {}),
     content: content.slice(offset, offset + limit),
     offset,
     totalChars: content.length,
