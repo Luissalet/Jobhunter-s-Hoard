@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import * as store from "./store.js";
@@ -22,6 +21,8 @@ import {
 } from "./applications.js";
 import { callTool, TOOLS, AGENT_INSTRUCTIONS } from "./agent-tools.js";
 import * as family from "./hoard-link.js";
+import { makeAgentRoutes } from "./hoard-commons/express.js";
+import { readOrCreateToken } from "./hoard-commons/server.js";
 import {
   rememberAnswer,
   listAnswers,
@@ -37,11 +38,8 @@ import { pickSource } from "./source-picker.js";
 export function installWorkspaceRoutes(app, port) {
   fs.mkdirSync(store.DATA_DIR, { recursive: true });
   const tokenFile = path.join(store.DATA_DIR, "mcp-token");
-  if (!fs.existsSync(tokenFile))
-    fs.writeFileSync(tokenFile, crypto.randomBytes(32).toString("hex"), {
-      mode: 0o600,
-    });
-  const token = fs.readFileSync(tokenFile, "utf8").trim();
+  // The token is created once and kept: a bridge that is already running keeps working across restarts of the app.
+  const token = readOrCreateToken(tokenFile);
   // The Hoard family: events on the hub's bus (agent.call per call) and the
   // hoard_link block in /api/health; the token above is this app's voice there.
   family.configure({ app: "jobhunter", dataDir: store.DATA_DIR, tokenFile });
@@ -53,37 +51,20 @@ export function installWorkspaceRoutes(app, port) {
       next(e);
     }
   };
-  // The family's catalogue: what the MCP bridge lists, as JSON Schema, plus the briefing.
-  app.get("/api/agent/tools", (req, res) => {
-    res.json({
-      instructions: AGENT_INSTRUCTIONS,
-      tools: TOOLS.map((t) => ({
-        name: t.name,
-        description: t.description,
-        annotations: t.annotations,
-        inputSchema: z.toJSONSchema(t.schema, { io: "input" }),
-      })),
-    });
-  });
-  app.post(
-    "/api/agent/call",
-    family.recordAgentRoute((req, res, next) => next()),
-    (req, res, next) => {
-      const auth = Buffer.from(req.headers.authorization || ""),
-        expected = Buffer.from(`Bearer ${token}`);
-      if (
-        auth.length !== expected.length ||
-        !crypto.timingSafeEqual(auth, expected)
-      )
-        return res.status(401).json({ error: "Conexión MCP no autorizada." });
-      next();
+  // The family's two agent routes (catalogue and call, Bearer token, result cap, error envelope, agent.call audit event).
+  makeAgentRoutes({
+    app: "jobhunter",
+    tools: TOOLS,
+    callTool,
+    z,
+    token,
+    instructions: AGENT_INSTRUCTIONS,
+    capLimit: 500_000,
+    recordCall(tool, ok, ms, details) {
+      if (ok) lastCallAt = new Date().toISOString();
+      family.recordCall(tool, ok, ms, details);
     },
-    route(async (req) => {
-      const result = await callTool(req.body?.name, req.body?.arguments);
-      lastCallAt = new Date().toISOString();
-      return result;
-    }),
-  );
+  }).install(app);
   app.get(
     "/api/agent/config",
     route(() => ({

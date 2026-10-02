@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { findAvailablePort, validPort } from "../server/port.js";
+import { findAvailablePort, validPort } from "../server/hoard-commons/server.js";
 
-const apiPort = await findAvailablePort(validPort(process.env.PORT, 5178));
-const uiPort = await findAvailablePort(validPort(process.env.VITE_PORT, 5173));
+const apiPort = await findAvailablePort(validPort(process.env.PORT, 5178), { span: 100 });
+const uiPort = await findAvailablePort(validPort(process.env.VITE_PORT, 5173), { span: 100 });
 const env = { ...process.env, PORT: String(apiPort), PORT_STRICT: "1", JOBHUNT_API_PORT: String(apiPort) };
 const vite = path.resolve("node_modules", "vite", "bin", "vite.js");
 const children = [

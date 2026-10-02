@@ -18,38 +18,23 @@ import { installWorkspaceRoutes } from "./workspace-routes.js";
 import * as family from "./hoard-link.js";
 import { contextPrompt, CONTEXT_RULES } from "./context.js";
 import { captureJob } from "./applications.js";
-import { findAvailablePort, validPort } from "./port.js";
+import { createGuard, installSpa, installErrorHandlers, runServer } from "./hoard-commons/express.js";
+import { userErrors } from "./errors.js";
+import { findAvailablePort, validPort, envFlag } from "./hoard-commons/server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-app.use((req, res, next) => {
-  const host = (req.headers.host || "").split(":")[0];
-  if (!["localhost", "127.0.0.1"].includes(host))
-    return res.status(403).json({ error: "Solo se permite acceso local." });
-  const origin = req.headers.origin;
-  if (origin) {
-    const allowed = [
-      `http://${req.headers.host}`,
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:5174",
-    ];
-    if (!allowed.includes(origin))
-      return res.status(403).json({ error: "Origen no permitido." });
-  }
-  if (req.headers["sec-fetch-site"] === "cross-site")
-    return res
-      .status(403)
-      .json({ error: "Petición desde otra web no permitida." });
-  next();
-});
-app.use(express.json({ limit: "5mb" }));
+app.disable("x-powered-by");
 
 const PREFERRED_PORT = validPort(process.env.PORT, 5178);
-const PORT = process.env.PORT_STRICT === "1"
+const PORT = envFlag("PORT_STRICT", false)
   ? PREFERRED_PORT
-  : await findAvailablePort(PREFERRED_PORT);
+  : await findAvailablePort(PREFERRED_PORT, { span: 100 });
+// Host, Origin and Sec-Fetch-Site checks of the shared guard; JOBHUNT_ALLOWED_HOSTS adds names (a LAN name, a tunnel) on top of
+// localhost, 127.0.0.1 and [::1].
+app.use(createGuard({ port: PORT, allowedHosts: process.env.JOBHUNT_ALLOWED_HOSTS }));
+app.use(express.json({ limit: "5mb" }));
+
 installWorkspaceRoutes(app, PORT);
 
 // ---------- Salud ----------
@@ -414,29 +399,17 @@ app.get("/api/export.csv", (req, res) => {
 
 // ---------- Frontend estático (npm run build && npm start) ----------
 const DIST = path.join(__dirname, "..", "dist");
-if (fs.existsSync(DIST)) {
-  app.use(express.static(DIST));
-  app.get(/^(?!\/api).*/, (req, res) =>
-    res.sendFile(path.join(DIST, "index.html")),
-  );
-}
+if (fs.existsSync(DIST)) installSpa(app, DIST, { express });
+else app.all(/^\/api(\/.*)?$/, (req, res) => res.status(404).json({ error: "Ruta no encontrada.", code: "not_found" }));
 
-app.use((err, req, res, next) => {
-  res
-    .status(400)
-    .json({
-      error: err.issues
-        ? err.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
-        : err.message,
-    });
-});
+app.use(userErrors);
+installErrorHandlers(app);
 
-const server = app.listen(PORT, "127.0.0.1", () => {
-  if (PORT !== PREFERRED_PORT)
-    console.log(`Puerto ${PREFERRED_PORT} ocupado; usando ${PORT}.`);
-  console.log(`⚡ Jubhunter's Hoard server en http://127.0.0.1:${PORT}`);
-});
-server.on("error", (error) => {
+try {
+  const { port } = await runServer({ service: "Jubhunter's Hoard", createApp: () => app, port: PORT });
+  if (port !== PREFERRED_PORT) console.log(`Puerto ${PREFERRED_PORT} ocupado; usando ${port}.`);
+  console.log(`⚡ Jubhunter's Hoard server en http://127.0.0.1:${port}`);
+} catch (error) {
   console.error(`No se pudo iniciar Jubhunter: ${error.message}`);
   process.exitCode = 1;
-});
+}
