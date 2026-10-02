@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { findAvailablePort, validPort } from "../server/port.js";
+import { findAvailablePort, validPort } from "../server/hoard-commons/server.js";
 
-const port = await findAvailablePort(validPort(process.env.PORT, 5178));
+const port = await findAvailablePort(validPort(process.env.PORT, 5178), { span: 100 });
 const url = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ["server/index.js"], {
   env: { ...process.env, PORT: String(port), PORT_STRICT: "1" },

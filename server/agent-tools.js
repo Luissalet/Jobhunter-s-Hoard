@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { userError } from "./errors.js";
 import { rememberAnswer, answerSchema } from "./answer-library.js";
 import * as store from "./store.js";
 import {
@@ -226,6 +227,12 @@ export const TOOLS = [
 ];
 export async function callTool(name, args) {
   const tool = TOOLS.find((t) => t.name === name);
-  if (!tool) throw Error("Herramienta desconocida.");
-  return await tool.run(tool.schema.parse(args || {}));
+  if (!tool)
+    throw Object.assign(new Error("Herramienta desconocida."), { status: 404, code: "unknown_tool", expose: true });
+  const parsed = tool.schema.parse(args || {});
+  try {
+    return await tool.run(parsed);
+  } catch (e) {
+    throw userError(e);
+  }
 }
