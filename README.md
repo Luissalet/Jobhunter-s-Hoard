@@ -45,3 +45,10 @@ npm audit
 ```
 
 Tests use temporary directories and an isolated UI fixture. Product and design decisions are in `PRODUCT.md` and `DESIGN.md`.
+
+
+## Shared services (HoardLink 0.8.1)
+
+Scanned source PDFs use Kafka through the family document client; the existing local reader remains available when the owner cannot be reached.
+
+The vendored copy is maintained by HoardLink’s sync script. Windows validation and the family service contract are documented in HoardLink’s `docs/commons/windows-validation.md` and `docs/commons/services.md`.
