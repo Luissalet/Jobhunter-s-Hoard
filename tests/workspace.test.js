@@ -6,7 +6,10 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { makePdf } from "./helpers.js";
 
+// Nothing here may reach a real family hub that happens to run on the machine.
+process.env.HOARD_HUB_URL = "http://127.0.0.1:9";
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "jobhunt-test-"));
 process.env.JOBHUNT_DATA_DIR = path.join(temp, "data");
 const store = await import("../server/store.js");
@@ -400,27 +403,3 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
     await new Promise((resolve) => child.once("exit", resolve));
   }
 });
-function makePdf(text) {
-  const stream = `BT /F1 12 Tf 40 100 Td (${text}) Tj ET`;
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
-  ];
-  let out = "%PDF-1.4\n",
-    offsets = [0];
-  objects.forEach((o, i) => {
-    offsets.push(Buffer.byteLength(out));
-    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
-  });
-  const xref = Buffer.byteLength(out);
-  out += `xref\n0 6\n0000000000 65535 f \n${offsets
-    .slice(1)
-    .map((n) => String(n).padStart(10, "0") + " 00000 n ")
-    .join(
-      "\n",
-    )}\ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return Buffer.from(out);
-}
