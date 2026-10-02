@@ -1,26 +1,18 @@
 // Adaptadores de fuentes de empleo gratuitas. Cada uno normaliza a:
 // { source, title, company, location, remote, salary, url, description, tags, postedAt, lang }
 import { getSettings } from './store.js';
+import { PUBLIC, htmlToText, politeJson } from './hoard-commons/web.js';
 
 const TIMEOUT = 15_000;
-const UA = { 'User-Agent': 'Mozilla/5.0 (JubhuntersHoard personal tracker)' };
+const UA = 'Mozilla/5.0 (JubhuntersHoard personal tracker)';
+// The biggest board (Arbeitnow) answers with ~2.7 MB a page, so the default 3 MB of the shared fetcher is too tight.
+const MAX_BYTES = 12 * 1024 * 1024;
 
+// The text of an API's HTML fragment (every visible word, no page chrome to drop): the shared converter, with the list items kept
+// as "- " bullets because the descriptions are read by a person and by the scoring prompt.
 function stripHtml(html) {
-  return (html || '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  const text = htmlToText(String(html || '').replace(/<li\b[^>]*>/gi, '<li>- '), { dropChrome: false }).text;
+  return text.replace(/^- *\n+/gm, '- ');
 }
 
 function matches(query, ...fields) {
@@ -29,14 +21,16 @@ function matches(query, ...fields) {
   return terms.every((t) => hay.includes(t));
 }
 
-async function getJson(url, headers = {}) {
-  const res = await fetch(url, { headers: { ...UA, ...headers }, signal: AbortSignal.timeout(TIMEOUT) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+// One JSON API call through the shared polite fetcher: public addresses only, no redirects, at least a second between two calls to
+// the same host, a size cap and a timeout. Throws an Error with a sentence for the person ("HTTP 429", "timeout ...").
+export async function getJson(url, { headers = {}, profile = PUBLIC } = {}) {
+  const r = await politeJson(url, { userAgent: UA, timeoutMs: TIMEOUT, maxBytes: MAX_BYTES, headers, profile });
+  if (r.ok) return r.data;
+  throw new Error(r.code === 'http' ? `HTTP ${r.status}${r.retryAfterMs ? ` (reintenta en ${Math.ceil(r.retryAfterMs / 1000)} s)` : ''}` : r.error);
 }
 
 // --- Remotive: remoto mundial, sin key ---
-async function remotive({ query }) {
+async function remotive({ query, getJson }) {
   const data = await getJson(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=50`);
   return (data.jobs || []).map((j) => ({
     source: 'remotive',
@@ -54,7 +48,7 @@ async function remotive({ query }) {
 }
 
 // --- Arbeitnow: Europa, sin key ---
-async function arbeitnow({ query }) {
+async function arbeitnow({ query, getJson }) {
   const pages = [1, 2];
   const all = [];
   for (const p of pages) {
@@ -79,7 +73,7 @@ async function arbeitnow({ query }) {
 }
 
 // --- RemoteOK: remoto, sin key ---
-async function remoteok({ query }) {
+async function remoteok({ query, getJson }) {
   const data = await getJson('https://remoteok.com/api');
   return (Array.isArray(data) ? data : [])
     .filter((j) => j && j.position)
@@ -101,7 +95,7 @@ async function remoteok({ query }) {
 }
 
 // --- Adzuna: España incluida, requiere key gratuita (developer.adzuna.com) ---
-async function adzuna({ query, location }) {
+async function adzuna({ query, location, getJson }) {
   const { adzunaAppId, adzunaAppKey, adzunaCountry } = getSettings();
   if (!adzunaAppId || !adzunaAppKey) {
     throw new Error('Configura app_id/app_key de Adzuna en Ajustes (gratis en developer.adzuna.com)');
@@ -131,7 +125,7 @@ async function adzuna({ query, location }) {
 }
 
 // --- Hacker News "Who is hiring" (Algolia, sin key) ---
-async function hackernews({ query }) {
+async function hackernews({ query, getJson }) {
   const stories = await getJson(
     'https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=6'
   );
@@ -162,7 +156,7 @@ async function hackernews({ query }) {
 }
 
 // --- Jobicy: remoto mundial, sin key ---
-async function jobicy({ query }) {
+async function jobicy({ query, getJson }) {
   const firstTerm = query.trim().split(/\s+/)[0] || '';
   const data = await getJson(
     `https://jobicy.com/api/v2/remote-jobs?count=50&tag=${encodeURIComponent(firstTerm)}`
@@ -185,7 +179,7 @@ async function jobicy({ query }) {
 }
 
 // --- Himalayas: remoto mundial, sin key ---
-async function himalayas({ query }) {
+async function himalayas({ query, getJson }) {
   const data = await getJson('https://himalayas.app/jobs/api?limit=100');
   return (data.jobs || [])
     .filter((j) => matches(query, j.title, j.excerpt || '', (j.categories || []).join(' ')))
@@ -217,9 +211,10 @@ export const SOURCE_INFO = [
   { id: 'hackernews', label: 'HN Who is hiring', needsKey: false },
 ];
 
-export async function searchAll({ query, location, sources }) {
+// `fetchJson` is only replaced by tests.
+export async function searchAll({ query, location, sources }, { fetchJson = getJson } = {}) {
   const chosen = (sources?.length ? sources : Object.keys(ADAPTERS)).filter((s) => ADAPTERS[s]);
-  const settled = await Promise.allSettled(chosen.map((s) => ADAPTERS[s]({ query, location })));
+  const settled = await Promise.allSettled(chosen.map((s) => ADAPTERS[s]({ query, location, getJson: fetchJson })));
   const results = [];
   const errors = [];
   settled.forEach((r, i) => {
@@ -236,5 +231,6 @@ export async function searchAll({ query, location, sources }) {
   });
   return { results: deduped, errors };
 }
+
 
 export { stripHtml };
