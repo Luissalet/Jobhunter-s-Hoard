@@ -10,7 +10,7 @@ const MAX_BYTES = 12 * 1024 * 1024;
 
 // The text of an API's HTML fragment (every visible word, no page chrome to drop): the shared converter, with the list items kept
 // as "- " bullets because the descriptions are read by a person and by the scoring prompt.
-function stripHtml(html) {
+export function stripHtml(html) {
   const text = htmlToText(String(html || '').replace(/<li\b[^>]*>/gi, '<li>- '), { dropChrome: false }).text;
   return text.replace(/^- *\n+/gm, '- ');
 }
@@ -231,6 +231,3 @@ export async function searchAll({ query, location, sources }, { fetchJson = getJ
   });
   return { results: deduped, errors };
 }
-
-
-export { stripHtml };
