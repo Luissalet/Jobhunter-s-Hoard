@@ -2,10 +2,12 @@ import { useState } from "react";
 import { api, statusLabel } from "../api.js";
 import { agendaGroups, localDateValue } from "../job-insights.js";
 import Icon from "./Icon.jsx";
+import { useCopilotContext } from "../copilot-hooks.js";
 
 export default function AgendaTab({ jobs, replaceJob, openDetail, notify }) {
   const [view, setView] = useState("due"), [busy, setBusy] = useState({});
   const groups = agendaGroups(jobs);
+  useCopilotContext(() => ({ view: { page: "agenda", agenda: { list: view, due: groups.due.length, interviews: groups.interviews.length, future: groups.future.length, unplanned: groups.unplanned.length } } }));
   const tabs = [["due", "Hoy y atrasadas"], ["interviews", "Entrevistas"], ["future", "Programadas"], ["unplanned", "Sin próxima acción"]];
   const patch = async (job, body) => {
     setBusy((b) => ({ ...b, [job.id]: true }));

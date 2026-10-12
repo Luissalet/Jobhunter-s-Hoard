@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api, daysAgo } from '../api.js';
 import { searchResultsByFreshness } from '../job-insights.js';
+import { useCopilotContext } from '../copilot-hooks.js';
 
 export default function SearchTab({ settings, sources, addJobs, notify, saveSearches }) {
   const [query, setQuery] = useState('');
@@ -16,6 +17,10 @@ export default function SearchTab({ settings, sources, addJobs, notify, saveSear
 
   const savedSearches = settings.savedSearches || [];
   const visibleResults = searchResultsByFreshness(results, ageDays, sortBy);
+  useCopilotContext(() => ({
+    view: { page: "search", filters: { ...(query ? { query } : {}), ...(location ? { location } : {}), sources: [...chosen], ...(ageDays ? { max_age_days: ageDays } : {}), results: results.length, ticked: selected.size } },
+    editors: query.trim() ? [{ kind: "job-search", object_id: null, dirty: true, fields: { query, location } }] : [],
+  }));
 
   const runSearch = async (q, loc, srcs) => {
     setLoading(true);

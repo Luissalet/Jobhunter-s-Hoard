@@ -30,5 +30,13 @@
     "env": { "JOBHUNT_URL": "{APP_URL}", "JOBHUNT_TOKEN_FILE": "{TOKEN_FILE}" },
     "optional_env": []
   },
-  "x-family": { "stack": "node" }
+  "x-family": {
+    "stack": "node",
+    "copilot": {
+      "provider": "faustus",
+      "contract": "1.0",
+      "panel": "/api/copilot/panel.js",
+      "context": ["job", "context", "answer", "project", "view.page", "view.job_id", "view.detail_tab", "view.filters", "view.section", "view.editor"]
+    }
+  }
 }

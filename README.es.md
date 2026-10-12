@@ -102,6 +102,23 @@ Variables opcionales: `PORT`, `JOBHUNT_DATA_DIR`; adaptador MCP: `JOBHUNT_URL`, 
 
 La app sigue el contrato de la familia: `faustus-plugin.json` en la raíz (Faustus y el Hoard Hub la descubren con él), `GET /api/agent/tools` (el catálogo en JSON Schema más las instrucciones), `POST /api/agent/call` con `Authorization: Bearer <data/mcp-token>` y `{name, arguments, caller}`, y un evento `agent.call` por llamada en el bus del hub (`server/hoard-link.js`, copia de la librería del hub; `HOARD_EVENTS=0` lo silencia, `HOARD_HUB_URL` cambia el hub). Así una regla del hub o cualquier otra app de la familia puede consultar candidaturas y contextos sin conocer este puerto ni este token.
 
+## Copilot de Faustus
+
+Todas las pantallas tienen un botón flotante **Faustus** (abajo a la derecha) que abre el asistente Faustus en un panel lateral. La conversación, el modelo, la memoria y las herramientas viven en Faustus: esta app solo retransmite el panel y no guarda historial. Necesita Faustus en marcha (`HOARD_FAUSTUS_URL`, por defecto `http://127.0.0.1:7000`); sin él, el botón avisa de que el copilot no está disponible y el resto de la app no cambia. El relay se monta al servir el cliente compilado (`npm run build` y `npm start`).
+
+Rutas: `GET /api/copilot/info`, `GET /api/copilot/panel.js`, `GET /api/copilot/launcher.js` y `POST /api/copilot/proxy` (solo retransmite las rutas propias del copilot; el token de Faustus no llega al navegador).
+
+Qué le cuenta cada turno al asistente (`window.hoardCopilot.context()`, leído con la propia API de la app):
+
+- `project`: la búsqueda (contexto) en uso; cada búsqueda tiene su propia conversación.
+- `view.page` (`applications`, `agenda`, `search`, `context`, `connection`, `stats`, `settings`) y, con una candidatura abierta, `view.job_id` y `view.detail_tab`; los filtros de la lista, las filas marcadas, la lista de seguimiento, la consulta de búsqueda y la sección de Mi contexto.
+- `active_objects`: la candidatura abierta (estado, encaje, fechas, notas, borrador, intentos y respuestas de la empresa), su búsqueda (instrucciones, fuentes, preferencias), las candidaturas marcadas y la respuesta que se edita. Un formulario de alta, un id desconocido o `new` no añaden objeto y no fallan.
+- `view.editor`: los campos escritos en el formulario abierto y cuáles cambiaron (datos de la oferta, notas, borrador, oferta nueva, hoja pegada, búsqueda, perfil, preferencias e instrucciones del contexto, respuesta nueva o en edición, fuente nueva, ajustes). Las claves de los proveedores de IA nunca se envían. Si hay varios formularios abiertos, van en `view.editors`.
+
+Cuando el asistente termina un turno, las vistas abiertas se recargan en su sitio; los formularios conservan lo escrito y los campos que no tocaste siguen los valores nuevos. Guardar envía **solo los campos que cambiaste**: datos de la oferta y notas (el backend fusiona), ajustes, datos personales y perfil; y como el servidor reemplaza contextos y borradores enteros, estos se montan sobre la copia que tiene el servidor en ese momento.
+
+Los diálogos de candidatura y de alta se abren junto a la página, no como diálogos modales, para que el botón de Faustus siga usable con ellos abiertos. Se desactiva con `HOARD_COPILOT=0`. El cliente está en `client/src/copilot-context.js` y `client/src/copilot-hooks.js`.
+
 ## Verificación
 
 ```sh
