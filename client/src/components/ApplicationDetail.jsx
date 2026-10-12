@@ -5,42 +5,74 @@ import { modeLabel } from "./ApplicationsTab.jsx";
 import Icon from "./Icon.jsx";
 import { localDateValue, validDate } from "../job-insights.js";
 import { confirmDiscard, useUnsavedChanges } from "../useUnsavedChanges.js";
+import { useOpenDialog } from "../useDialog.js";
+import { useCopilotContext } from "../copilot-hooks.js";
+import { changedFields, rebaseForm, draftToSave, clip, clipFields } from "../copilot-context.js";
+
+// The draft as the form shows it: the saved one, or the tailored texts when nothing was saved yet.
+const draftOf = (job) =>
+  job.application?.draft || {
+    cvMarkdown: job.tailored?.cvMarkdown || "",
+    letterMarkdown: job.tailored?.letterMarkdown || "",
+    answers: [],
+    missing: [],
+    lang: job.lang || "es",
+  };
+const offerForm = (job) => ({ title: job.title, company: job.company || "", location: job.location || "", workMode: job.workMode || "unknown", salary: job.salary || "", url: job.url || "", description: job.description || "", appliedAt: localDateValue(job.appliedAt) });
 export default function ApplicationDetail({ job, close, notify, refresh }) {
   const dialog = useRef(null),
     [tab, setTab] = useState("offer"),
     [busy, setBusy] = useState(""),
     [notes, setNotes] = useState(job.notes || ""),
     [offerEdit, setOfferEdit] = useState(null),
-    [draft, setDraft] = useState(
-      job.application?.draft || {
-        cvMarkdown: job.tailored?.cvMarkdown || "",
-        letterMarkdown: job.tailored?.letterMarkdown || "",
-        answers: [],
-        missing: [],
-        lang: job.lang || "es",
-      },
-    ),
+    [draft, setDraft] = useState(() => draftOf(job)),
     [dirty, setDirty] = useState(false);
-  useEffect(() => {
-    dialog.current.showModal();
-  }, []);
+  // What the server had when each form was last in step with it: a reload (the assistant worked meanwhile) moves the fields the
+  // user has not touched to the new values and keeps the ones being edited; a save sends only what the user changed.
+  const draftBase = useRef(draftOf(job)),
+    notesBase = useRef(job.notes || ""),
+    offerBase = useRef(null);
   const pending = dirty || notes !== (job.notes || "") || !!offerEdit;
   useUnsavedChanges(pending);
   const requestClose = () => {
     if (confirmDiscard(pending)) close();
   };
+  useOpenDialog(dialog, requestClose);
   useEffect(() => {
-    if (!dirty)
-      setDraft(
-        job.application?.draft || {
-          cvMarkdown: job.tailored?.cvMarkdown || "",
-          letterMarkdown: job.tailored?.letterMarkdown || "",
-          answers: [],
-          missing: [],
-          lang: job.lang || "es",
-        },
-      );
-  }, [job.application?.draft, job.tailored, dirty]);
+    const next = draftOf(job),
+      prev = draftBase.current;
+    if (JSON.stringify(next) === JSON.stringify(prev)) return;
+    draftBase.current = next;
+    setDraft((d) => rebaseForm(prev, next, d));
+  }, [job.application?.draft, job.tailored, job.lang]);
+  useEffect(() => {
+    const next = job.notes || "",
+      prev = notesBase.current;
+    if (next === prev) return;
+    notesBase.current = next;
+    setNotes((n) => (n === prev ? next : n));
+  }, [job.notes]);
+  useEffect(() => {
+    if (!offerBase.current) return;
+    const next = offerForm(job),
+      prev = offerBase.current;
+    if (JSON.stringify(next) === JSON.stringify(prev)) return;
+    offerBase.current = next;
+    setOfferEdit((o) => (o ? rebaseForm(prev, next, o) : o));
+  }, [job]);
+  // The Faustus copilot: this job, the dialog tab, and what has been typed and not saved yet.
+  useCopilotContext(() => {
+    const offerChanged = offerEdit ? Object.keys(changedFields(offerBase.current, offerEdit)) : [];
+    const draftChanged = dirty ? Object.keys(changedFields(draftBase.current, draft)) : [];
+    return {
+      view: { job_id: job.id, detail_tab: tab },
+      editors: [
+        offerEdit && { kind: "job-offer", object_id: job.id, dirty: offerChanged.length > 0, changed: offerChanged, fields: clipFields(offerEdit) },
+        notes !== (job.notes || "") && { kind: "job-notes", object_id: job.id, dirty: true, fields: { notes: clip(notes, 1500) } },
+        dirty && { kind: "job-draft", object_id: job.id, dirty: true, changed: draftChanged, fields: { lang: draft.lang, cvMarkdown: clip(draft.cvMarkdown, 1500), letterMarkdown: clip(draft.letterMarkdown, 1500), answers: (draft.answers || []).map((a) => ({ question: a.question, answer: clip(a.answer, 300) })), missing: draft.missing } },
+      ].filter(Boolean),
+    };
+  });
   const action = async (name, fn) => {
     setBusy(name);
     try {
@@ -58,6 +90,8 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
     setDirty(true);
   };
   return (
+    <>
+    <div className="dialog-scrim" aria-hidden="true" />
     <dialog
       ref={dialog}
       className="detail-dialog"
@@ -132,8 +166,8 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
       <div className="detail-body">
         {tab === "offer" && (
           <>
-            <div className="section-heading"><h3>Datos de la oferta</h3>{!offerEdit && <button className="btn-ghost" onClick={() => setOfferEdit({ title: job.title, company: job.company || "", location: job.location || "", workMode: job.workMode || "unknown", salary: job.salary || "", url: job.url || "", description: job.description || "", appliedAt: localDateValue(job.appliedAt) })}>Editar datos</button>}</div>
-            {offerEdit && <form className="offer-editor inline-panel" onSubmit={(e) => { e.preventDefault(); action("offer", async () => { await api.patchJob(job.id, { ...offerEdit, appliedAt: offerEdit.appliedAt ? offerEdit.appliedAt + "T12:00:00" : null }); setOfferEdit(null); }); }}>
+            <div className="section-heading"><h3>Datos de la oferta</h3>{!offerEdit && <button className="btn-ghost" onClick={() => { offerBase.current = offerForm(job); setOfferEdit(offerForm(job)); }}>Editar datos</button>}</div>
+            {offerEdit && <form className="offer-editor inline-panel" onSubmit={(e) => { e.preventDefault(); action("offer", async () => { const body = changedFields(offerBase.current, offerEdit); if ("appliedAt" in body) body.appliedAt = body.appliedAt ? body.appliedAt + "T12:00:00" : null; if (Object.keys(body).length) await api.patchJob(job.id, body); setOfferEdit(null); offerBase.current = null; }); }}>
               <Field label="Puesto" required value={offerEdit.title} onChange={(e) => setOfferEdit({ ...offerEdit, title: e.target.value })} />
               <Field label="Empresa" value={offerEdit.company} onChange={(e) => setOfferEdit({ ...offerEdit, company: e.target.value })} />
               <div className="form-grid"><Field label="Modalidad"><select value={offerEdit.workMode} onChange={(e) => setOfferEdit({ ...offerEdit, workMode: e.target.value })}>{["remote", "hybrid", "onsite", "unknown"].map((mode) => <option key={mode} value={mode}>{modeLabel(mode)}</option>)}</select></Field><Field label="Ubicación" value={offerEdit.location} onChange={(e) => setOfferEdit({ ...offerEdit, location: e.target.value })} /></div>
@@ -141,7 +175,7 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
               <Field label="Enlace original" type="url" value={offerEdit.url} onChange={(e) => setOfferEdit({ ...offerEdit, url: e.target.value })} />
               <Field label="Fecha de envío" type="date" hint="Déjala vacía si no conoces la fecha real." value={offerEdit.appliedAt} onChange={(e) => setOfferEdit({ ...offerEdit, appliedAt: e.target.value })} />
               <Field label="Descripción"><textarea rows="7" value={offerEdit.description} onChange={(e) => setOfferEdit({ ...offerEdit, description: e.target.value })} /></Field>
-              <div className="form-actions"><button className="btn-primary" disabled={!!busy || !offerEdit.title.trim()}>{busy === "offer" ? "Guardando…" : "Guardar datos"}</button><button className="btn-ghost" type="button" disabled={!!busy} onClick={() => setOfferEdit(null)}>Cancelar</button></div>
+              <div className="form-actions"><button className="btn-primary" disabled={!!busy || !offerEdit.title.trim()}>{busy === "offer" ? "Guardando…" : "Guardar datos"}</button><button className="btn-ghost" type="button" disabled={!!busy} onClick={() => { setOfferEdit(null); offerBase.current = null; }}>Cancelar</button></div>
             </form>}
             <div className="job-facts">
               <span>
@@ -290,10 +324,12 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
                 disabled={!!busy || !dirty}
                 onClick={() =>
                   action("save", async () => {
+                    // The server replaces the whole draft: lay only the changed fields over the draft as it is now.
+                    const fresh = (await api.state()).jobs.find((j) => j.id === job.id) || job;
                     await api.workspace(
                       `/api/jobs/${job.id}/draft`,
                       "PUT",
-                      draft,
+                      draftToSave(draftOf(fresh), draftBase.current, draft),
                     );
                     setDirty(false);
                   })
@@ -486,5 +522,6 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
         )}
       </div>
     </dialog>
+    </>
   );
 }

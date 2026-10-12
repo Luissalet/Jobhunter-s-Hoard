@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUnsavedChanges } from "../useUnsavedChanges.js";
 import { api } from "../api.js";
 import Icon from "./Icon.jsx";
 import LettersLibrary from "./LettersLibrary.jsx";
+import { useCopilotContext, useCopilotRefresh } from "../copilot-hooks.js";
+import { changedFields, rebaseForm, rebaseContext, contextToSave, clip, clipFields } from "../copilot-context.js";
 export function Field({ label, children, hint, ...props }) {
   return (
     <label className="field">
@@ -135,6 +137,15 @@ function AnswerRow({
     </div>
   );
 }
+// The context as the form edits it (answers have their own endpoints and never travel in the draft).
+const draftFromContext = (context) => {
+  const { answers: _omit, ...rest } = context;
+  return {
+    ...rest,
+    preferences: { ...defaults, ...context.preferences },
+    letters: context.letters || [],
+  };
+};
 const sections = [
   ["profile", "Perfil personal"],
   ["preferences", "Lo que busco"],
@@ -156,14 +167,7 @@ export default function WorkspaceTab({
     // o borra con su propio endpoint (ver más abajo) para que un "Guardar
     // cambios" nunca reenvíe una copia obsoleta por encima de una edición
     // más reciente hecha desde otra pestaña o por el asistente.
-    [draft, setDraft] = useState(() => {
-      const { answers: _omit, ...rest } = context;
-      return {
-        ...rest,
-        preferences: { ...defaults, ...context.preferences },
-        letters: context.letters || [],
-      };
-    }),
+    [draft, setDraft] = useState(() => draftFromContext(context)),
     [answers, setAnswers] = useState([]),
     [answersLoading, setAnswersLoading] = useState(false),
     [onlyPending, setOnlyPending] = useState(false),
@@ -199,6 +203,58 @@ export default function WorkspaceTab({
     onDirty(pending);
     return () => onDirty(false);
   }, [pending, onDirty]);
+  // What the server had when the forms were last in step with it. A reload (the assistant worked meanwhile) moves the fields the
+  // user has not touched to the new values and keeps the ones being edited; saving sends only what the user changed.
+  const ctxBase = useRef(draftFromContext(context)),
+    personalBase = useRef(state.settings.personal),
+    profileBase = useRef(state.profile);
+  useEffect(() => {
+    const next = draftFromContext(context),
+      prev = ctxBase.current;
+    if (JSON.stringify(next) === JSON.stringify(prev)) return;
+    ctxBase.current = next;
+    setDraft((d) => rebaseContext(prev, next, d));
+  }, [context]);
+  useEffect(() => {
+    const next = state.settings.personal,
+      prev = personalBase.current;
+    if (JSON.stringify(next) === JSON.stringify(prev)) return;
+    personalBase.current = next;
+    setPersonal((p) => rebaseForm(prev, next, p));
+  }, [state.settings.personal]);
+  useEffect(() => {
+    const next = state.profile,
+      prev = profileBase.current;
+    if (next === prev) return;
+    profileBase.current = next;
+    setProfile((p) => (p === prev ? next : p));
+  }, [state.profile]);
+  useCopilotRefresh(() => { loadAnswers(); });
+  // The Faustus copilot: the context and section open, and the fields being edited and not saved.
+  useCopilotContext(() => {
+    const changed = changedFields(ctxBase.current, draft);
+    if (changed.preferences) changed.preferences = changedFields(ctxBase.current.preferences, draft.preferences);
+    if (changed.letters) changed.letters = `${draft.letters.length} letters`;
+    if (changed.sources) delete changed.sources;
+    const personalChanged = changedFields(personalBase.current, personal);
+    const profileChanged = profile !== profileBase.current;
+    const unsaved = {
+      ...clipFields(changed),
+      ...(Object.keys(personalChanged).length ? { personal: clipFields(personalChanged) } : {}),
+      ...(profileChanged ? { profile: clip(profile, 1500) } : {}),
+    };
+    const original = answers.find((a) => a.id === editingAnswerId);
+    return {
+      view: { page: "context", section, ...(editingAnswerId ? { answer_id: editingAnswerId } : {}) },
+      editors: [
+        dirty && Object.keys(unsaved).length && { kind: "context-edit", object_id: context.id, dirty: true, changed: Object.keys(unsaved), fields: unsaved },
+        (question || answer) && { kind: "answer-new", object_id: null, dirty: true, fields: clipFields({ question, answer }) },
+        editingAnswerId && answerEdit && { kind: "answer-edit", object_id: editingAnswerId, dirty: !original || JSON.stringify(changedFields(original, answerEdit)) !== "{}", fields: clipFields(answerEdit) },
+        pendingSource && { kind: "source-new", object_id: null, dirty: true, fields: clipFields(source) },
+        newName && { kind: "context-new", object_id: null, dirty: true, fields: { name: newName } },
+      ].filter(Boolean),
+    };
+  });
   const set = (key, value) => {
     setDraft((d) => ({ ...d, [key]: value }));
     setDirty(true);
@@ -320,9 +376,14 @@ export default function WorkspaceTab({
   const save = async () => {
     setBusy(true);
     try {
-      await api.workspace(`/api/contexts/${context.id}`, "PUT", draft);
-      await api.saveSettings({ personal });
-      await api.saveProfile(profile);
+      // The context is replaced as a whole by the server: send the context as it is now with only the changed fields on top,
+      // so an edit the assistant made meanwhile to a field the user did not touch survives.
+      const fresh = (await api.state()).contexts.find((c) => c.id === context.id) || context;
+      const { body, changed } = contextToSave(fresh, ctxBase.current, draft);
+      if (changed.length) await api.workspace(`/api/contexts/${context.id}`, "PUT", body);
+      const personalChanged = changedFields(personalBase.current, personal);
+      if (Object.keys(personalChanged).length) await api.saveSettings({ personal: personalChanged });
+      if (profile !== profileBase.current) await api.saveProfile(profile);
       await refresh();
       setDirty(false);
       notify("Contexto y perfil guardados.", "info");
