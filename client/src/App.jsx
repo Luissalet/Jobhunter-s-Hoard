@@ -11,6 +11,7 @@ import ApplicationDetail from "./components/ApplicationDetail.jsx";
 import AddJob from "./components/AddJob.jsx";
 import Icon from "./components/Icon.jsx";
 import { confirmDiscard } from "./useUnsavedChanges.js";
+import { useCopilotContext, useCopilotRefresh } from "./copilot-hooks.js";
 const NAV = [
   ["pipeline", "Candidaturas", "briefcase"],
   ["agenda", "Seguimiento", "calendar"],
@@ -49,6 +50,13 @@ export default function App() {
     const t = setInterval(() => refresh().catch(() => {}), 8000);
     return () => clearInterval(t);
   }, [refresh]);
+  // The Faustus copilot: which tab and dialog are open, a reload when its turn ends, and a nudge when the search in use changes.
+  useCopilotContext(() => ({ view: { tab, job_id: detailId, adding } }));
+  useCopilotRefresh(() => { refresh().catch(() => {}); });
+  const activeContextId = state?.activeContextId;
+  useEffect(() => {
+    window.dispatchEvent(new Event("hoard:copilot-context-changed"));
+  }, [activeContextId]);
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(null), 6000);

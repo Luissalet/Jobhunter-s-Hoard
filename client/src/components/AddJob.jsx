@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import Icon from "./Icon.jsx";
 import { confirmDiscard, useUnsavedChanges } from "../useUnsavedChanges.js";
+import { useOpenDialog } from "../useDialog.js";
+import { useCopilotContext } from "../copilot-hooks.js";
+import { clip } from "../copilot-context.js";
 export default function AddJob({ contextId, close, onCreated, notify }) {
   const dialog = useRef(null),
     [job, setJob] = useState({
@@ -14,15 +17,17 @@ export default function AddJob({ contextId, close, onCreated, notify }) {
       source: "manual",
     }),
     [busy, setBusy] = useState(false);
-  useEffect(() => {
-    dialog.current.showModal();
-    dialog.current.querySelector("input")?.focus();
-  }, []);
   const pending = !!(job.title || job.company || job.url || job.description);
   useUnsavedChanges(pending);
   const requestClose = () => {
     if (confirmDiscard(pending)) close();
   };
+  useOpenDialog(dialog, requestClose);
+  useEffect(() => {
+    dialog.current.querySelector("input")?.focus();
+  }, []);
+  // A creation form: the typed fields reach the Faustus copilot, no object does.
+  useCopilotContext(() => ({ editors: [{ kind: "job-new", object_id: null, dirty: pending, fields: { title: job.title, company: job.company, url: job.url, workMode: job.workMode, description: clip(job.description, 1500) } }] }));
   const set = (k, v) => setJob((s) => ({ ...s, [k]: v }));
   const submit = async (e) => {
     e.preventDefault();
@@ -37,6 +42,8 @@ export default function AddJob({ contextId, close, onCreated, notify }) {
     }
   };
   return (
+    <>
+    <div className="dialog-scrim" aria-hidden="true" />
     <dialog
       ref={dialog}
       className="job-dialog"
@@ -120,5 +127,6 @@ export default function AddJob({ contextId, close, onCreated, notify }) {
         </div>
       </form>
     </dialog>
+    </>
   );
 }

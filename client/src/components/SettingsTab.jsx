@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { Field } from "./WorkspaceTab.jsx";
+import { useCopilotContext } from "../copilot-hooks.js";
+import { changedFields, rebaseForm, scrubSettings } from "../copilot-context.js";
 const presets = {
   mistral: ["Mistral", "https://api.mistral.ai/v1", "mistral-small-latest"],
   groq: ["Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"],
@@ -11,11 +13,34 @@ export default function SettingsTab({ state, setState, notify }) {
   const [s, setS] = useState(state.settings),
     [busy, setBusy] = useState(false);
   const set = (k, v) => setS((p) => ({ ...p, [k]: v }));
+  // The settings as the server had them when the form was last in step: a reload moves the fields the user has not touched, and
+  // saving sends only the ones changed (the server merges them, so a saved search or a key set elsewhere is not overwritten).
+  const base = useRef(state.settings);
+  useEffect(() => {
+    const next = state.settings,
+      prev = base.current;
+    if (JSON.stringify(next) === JSON.stringify(prev)) return;
+    base.current = next;
+    setS((p) => rebaseForm(prev, next, p));
+  }, [state.settings]);
+  const unsaved = () => {
+    const { personal: _personal, ...options } = s;
+    const { personal: _before, ...before } = base.current || {};
+    return changedFields(before, options);
+  };
+  // The Faustus copilot: the fields being edited (the keys of the providers are never sent, only that one changed).
+  useCopilotContext(() => {
+    const changed = unsaved();
+    return {
+      view: { page: "settings" },
+      editors: Object.keys(changed).length ? [{ kind: "app-settings", object_id: null, dirty: true, changed: Object.keys(changed), fields: scrubSettings(changed) }] : [],
+    };
+  });
   const save = async () => {
     setBusy(true);
     try {
-      const { personal, ...options } = s;
-      const settings = await api.saveSettings(options);
+      const options = unsaved();
+      const settings = Object.keys(options).length ? await api.saveSettings(options) : state.settings;
       setState((prev) => ({ ...prev, settings }));
       notify("Ajustes guardados.", "info");
     } catch (e) {

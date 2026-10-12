@@ -1923,3 +1923,22 @@ h2, h3 { color: var(--hoard-text); }
 
 /* The app icon as the brand mark (same as the window and taskbar icon). */
 .brand-mark.brand-icon, :root[data-theme="light"] .brand-mark.brand-icon { display: block; width: 32px; height: 32px; padding: 0; border-radius: 8px; background: none; object-fit: cover; flex: none; }
+/* The Faustus copilot sits at the bottom right: above the sticky save bars, not over their buttons. */
+:root {
+  --hoard-copilot-bottom: 76px;
+}
+/* The job dialogs open beside the page (see useDialog.js) so the Faustus button and panel stay usable; the scrim dims and blocks the page. */
+.dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #18271655;
+}
+.job-dialog,
+.detail-dialog {
+  z-index: 41;
+}
+.job-dialog {
+  position: fixed;
+  inset: 0;
+}

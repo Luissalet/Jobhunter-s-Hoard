@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api, statusLabel, STATUSES } from "../api.js";
 import Icon from "./Icon.jsx";
 import { wasSubmitted, validDate } from "../job-insights.js";
+import { useCopilotContext } from "../copilot-hooks.js";
+import { clip } from "../copilot-context.js";
 export const modeLabel = (m) =>
   ({
     remote: "Remoto",
@@ -71,6 +73,16 @@ export default function ApplicationsTab({
   });
   useEffect(() => { setSelected([]); }, [filter, statusFilter, modeFilter, query, context.id]);
   const selectedJobs = visible.filter((j) => selected.includes(j.id));
+  // What the Faustus copilot sees: the filters in use, the rows ticked, and the sheet being pasted.
+  useCopilotContext(() => ({
+    view: {
+      page: "applications",
+      visible: visible.length,
+      selected: selectedJobs.map((j) => j.id),
+      filters: Object.fromEntries(Object.entries({ list: filter, status: statusFilter, mode: modeFilter, sort: sort === "recent" ? "all" : sort, query }).filter(([, v]) => v && v !== "all")),
+    },
+    editors: importing && (raw || preview) ? [{ kind: "sheet-import", object_id: null, dirty: !!raw, fields: { text: clip(raw, 1500), rows_checked: preview ? preview.length : 0 } }] : [],
+  }));
   const applyBulk = async () => {
     if (!bulkStatus || !selectedJobs.length || bulkBusy) return;
     setBulkBusy(true);
