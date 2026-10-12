@@ -36,6 +36,28 @@ Paste a Google Sheet range or import CSV/TSV with columns such as link, company,
 
 Local files under `data/` include `db.json`, `profile.md` and `mcp-token`. The token is generated on startup and is excluded from backups. Data is stored locally without app-level encryption. An external AI provider receives the dossier when its internal buttons are used; an external assistant receives only the data it queries through MCP. The health endpoint exposes service status without personal data.
 
+## Faustus copilot
+
+Every page has a floating **Faustus** button (bottom right) that opens the Faustus assistant in a side panel. The conversation, model, memory and tools live in Faustus: this app only relays the panel and keeps no history. It needs Faustus running (`HOARD_FAUSTUS_URL`, default `http://127.0.0.1:7000`); without it the button explains that the copilot is unavailable and the rest of the app is unaffected. The relay is mounted when the built client is served (`npm run build`, then `npm start`).
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/copilot/info` | App id and name, data space and where the panel script is. |
+| `GET /api/copilot/panel.js` | The Faustus panel, relayed from Faustus (same origin). |
+| `GET /api/copilot/launcher.js` | The button that mounts the panel; the served page carries its tag. |
+| `POST /api/copilot/proxy` | Relays only the copilot's own Faustus routes; the Faustus token never reaches the browser. |
+
+What every turn tells the assistant (`window.hoardCopilot.context()`, read through the app's own API):
+
+- `project`: the search (context) in use; each search has its own conversation. Switching searches switches the conversation.
+- `view.page` (`applications`, `agenda`, `search`, `context`, `connection`, `stats`, `settings`) and, with a job open, `view.job_id` and `view.detail_tab`; the list filters, the rows ticked, the agenda list, the search query, the section of Mi contexto.
+- `active_objects`: the open job (status, fit, dates, notes, draft state, attempts and employer responses), its search (instructions, sources, preferences), the ticked jobs and the answer being edited. Creation forms, an unknown job id and `new` add no object and never fail.
+- `view.editor`: the fields typed in the open form and which of them changed (offer data, notes, draft, new job, pasted sheet, search query, the context's profile, preferences and instructions, a new or edited answer, a new source, the settings). The keys of the AI providers are never sent. Several open forms are listed in `view.editors`.
+
+When the assistant finishes a turn the open views reload in place; forms keep what you typed and the fields you did not touch follow the new values. Saving sends **only the fields you changed**: job data and notes (the backend merges), settings, personal data and profile, and, because the server replaces whole contexts and drafts, the context and the draft are laid over the copy the server has at that moment.
+
+The job and new-job dialogs open beside the page instead of as modal dialogs so the Faustus button stays usable while they are open. Turn the copilot off with `HOARD_COPILOT=0`. The client is in `client/src/copilot-context.js` and `client/src/copilot-hooks.js`.
+
 ## Verify
 
 ```sh
