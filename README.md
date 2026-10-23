@@ -1,5 +1,12 @@
 # Jobhunter's Hoard
 
+In **My context → Sources**, **Search linked sources** searches the current text
+of enabled sources without AI or downloading linked pages. It shows one excerpt
+per document, provenance, errors and coverage: up to 60 files and their first
+20,000 characters. No match does not prove absence outside that coverage. The UI
+shares MCP `search_context` through `GET /api/contexts/:id/search?query=...` and
+does not change sources.
+
 [Español](README.es.md)
 
 A local workspace for job searching with an assistant: reusable personal profile, separate search contexts, linked source documents, application preparation and an outcome log available over MCP.

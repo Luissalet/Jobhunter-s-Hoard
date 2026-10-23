@@ -228,6 +228,10 @@ export function installWorkspaceRoutes(app, port) {
     route((req) => editSource(req.params.id, req.params.sourceId, null)),
   );
   app.get(
+    "/api/contexts/:id/search",
+    route((req) => callTool("search_context", { contextId: req.params.id, query: req.query.query })),
+  );
+  app.get(
     "/api/contexts/:id/sources/:sourceId/files",
     route((req) => listSourceFiles(req.params.id, req.params.sourceId)),
   );
