@@ -44,7 +44,7 @@ export default function SourceSearch({ context }) {
     {result && <div aria-live="polite">
       <h4>Resultados de «{result.query}» en {context.name}</h4>
       <p>{result.matches.length} documentos con coincidencias · {result.scanned} archivos consultados{result.truncated ? " · Cobertura parcial" : ""}</p>
-      <p className="supporting-copy">{result.notice}</p>
+      <p className="supporting-copy">Para ampliar la consulta, usa Ver en la lista de fuentes. La vista previa también puede ser parcial.</p>
       {!result.matches.length && <p>No hay coincidencias en el texto consultado.</p>}
       <ul className="source-search-results">{result.matches.map((match, index) => <li key={`${match.sourceId}:${match.relativePath}:${index}`}>
         <strong>{match.label}</strong>
