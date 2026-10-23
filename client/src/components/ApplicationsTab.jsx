@@ -4,6 +4,7 @@ import Icon from "./Icon.jsx";
 import { wasSubmitted, validDate } from "../job-insights.js";
 import { useCopilotContext } from "../copilot-hooks.js";
 import { clip } from "../copilot-context.js";
+import JobComparison from './JobComparison.jsx';
 export const modeLabel = (m) =>
   ({
     remote: "Remoto",
@@ -29,6 +30,7 @@ export default function ApplicationsTab({
   notify,
 }) {
   const [filter, setFilter] = useState("all"),
+    [comparing, setComparing] = useState(false),
     [statusFilter, setStatusFilter] = useState("all"),
     [modeFilter, setModeFilter] = useState("all"),
     [selected, setSelected] = useState([]),
@@ -71,7 +73,8 @@ export default function ApplicationsTab({
     const rank = (job) => order.includes(job[field]) ? order.indexOf(job[field]) : order.length;
     return (rank(a) - rank(b)) * (sort.endsWith("desc") ? -1 : 1) || recent;
   });
-  useEffect(() => { setSelected([]); }, [filter, statusFilter, modeFilter, query, context.id]);
+  useEffect(() => { setSelected([]); setComparing(false); }, [filter, statusFilter, modeFilter, query, context.id]);
+  useEffect(() => { if (selected.length < 2) setComparing(false); }, [selected.length]);
   const selectedJobs = visible.filter((j) => selected.includes(j.id));
   // What the Faustus copilot sees: the filters in use, the rows ticked, and the sheet being pasted.
   useCopilotContext(() => ({
@@ -308,6 +311,7 @@ export default function ApplicationsTab({
         <label className="selection-toggle"><input type="checkbox" checked={selectedJobs.length === visible.length} disabled={bulkBusy} onChange={(e) => setSelected(e.target.checked ? visible.map((j) => j.id) : [])} />Seleccionar visibles</label>
         {selectedJobs.length > 0 && <>
           <strong>{selectedJobs.length} seleccionadas</strong>
+          <button className="btn-ghost" disabled={selectedJobs.length < 2} aria-expanded={comparing} onClick={() => setComparing(!comparing)}>Comparar ofertas</button>
           <select aria-label="Estado para las seleccionadas" value={bulkStatus} disabled={bulkBusy} onChange={(e) => setBulkStatus(e.target.value)}>
             <option value="">Cambiar estado a…</option>
             {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -316,6 +320,7 @@ export default function ApplicationsTab({
           <button className="text-action" disabled={bulkBusy} onClick={() => setSelected([])}>Cancelar selección</button>
         </>}
       </div>}
+      {comparing && selectedJobs.length >= 2 && <JobComparison jobs={selectedJobs} onClose={() => setComparing(false)} onOpen={openDetail} notify={notify} />}
       {!jobs.length && !importing ? (
         <div className="empty-workspace">
           <div className="empty-intro">

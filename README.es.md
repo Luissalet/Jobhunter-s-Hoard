@@ -1,5 +1,13 @@
 # Jobhunter's Hoard
 
+En **Candidaturas**, selecciona dos o más ofertas y pulsa **Comparar ofertas**.
+La tabla reúne ubicación, modalidad, salario publicado y rango guardado con su
+moneda y periodo, estado, encaje previo, fechas y notas. Puedes abrir cada oferta
+desde su cabecera o copiar la comparativa como texto. Los datos desconocidos se
+indican sin inventarlos; no se convierte el salario ni se calcula otro encaje.
+La misma función nativa está en MCP `compare_jobs {jobIds}` y en
+`POST /api/jobs/compare`; consultar no modifica candidaturas.
+
 [English](README.md)
 
 Espacio local para buscar empleo con un asistente: perfil reutilizable, contextos de búsqueda, documentos enlazados, preparación de candidaturas y registro de resultados por MCP.
