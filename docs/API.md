@@ -6,7 +6,11 @@ The application serves its compiled client and native API from the same origin. 
 
 `GET /api/agent/tools` returns the native catalogue and instructions. `POST /api/agent/call` accepts `{name, arguments, caller}` with `Authorization: Bearer <data/mcp-token>`. The stdio entry point is `node server/mcp.js`, configured with `JOBHUNT_URL` and `JOBHUNT_TOKEN_FILE` or `JOBHUNT_TOKEN`.
 
-The 15 tools are `remember_answer`, `list_contexts`, `get_context`, `list_sources`, `list_source_files`, `read_source`, `search_context`, `list_jobs`, `capture_job`, `update_job_facts`, `get_application`, `save_application_draft`, `start_application`, `record_application_result` and `record_employer_response`. Their current schemas are available from the native catalogue. Saving a draft does not send an application; recording a submitted result requires observed confirmation.
+The 17 tools are `export_job_calendar`, `compare_jobs`, `remember_answer`, `list_contexts`, `get_context`, `list_sources`, `list_source_files`, `read_source`, `search_context`, `list_jobs`, `capture_job`, `update_job_facts`, `get_application`, `save_application_draft`, `start_application`, `record_application_result` and `record_employer_response`. Their current schemas are available from the native catalogue. Saving a draft does not send an application; recording a submitted result requires observed confirmation.
+
+`export_job_calendar {jobIds, kind}` (`kind: interview|review`) and `POST /api/jobs/calendar` share a read-only handler. Each distinct requested ID contributes its current `interviewAt` or `nextActionAt`; absent/invalid dates or missing jobs are returned in `skipped` with a reason. `events`, `generatedAt` and `ics` form one snapshot for preview/download. The UI submits only the IDs in its current Follow-up list. The API does not discover or add other candidates. Offset/Z values become UTC, no-zone times remain floating, and date-only values are all-day. UID is stable per job/type, with UTF-8 folding/escaping/CRLF per [RFC5545](https://www.rfc-editor.org/rfc/rfc5545.html). No duration, alarm, attendees, calendar invitation or remote synchronization is created; original fractional seconds remain in `original`, while ICS uses whole seconds. No job or setting is written.
+
+Calendar export uses the agent router's documented uncapped-result path so a large ICS and its events remain complete. This export's wrapper marks only its own result; the internal marker is not serialized in UI/API/MCP responses. Other tool response limits remain unchanged.
 
 ## Shared Faustus assistant
 

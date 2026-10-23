@@ -1953,6 +1953,16 @@ h2, h3 { color: var(--hoard-text); }
   position: fixed;
   inset: 0;
 }
+.agenda-calendar { padding-block: 18px; border-block: 1px solid var(--line); margin-bottom: 20px; min-width: 0; overflow-wrap: anywhere; }
+.agenda-calendar-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.agenda-calendar-heading button { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; white-space: normal; }
+.agenda-calendar-preview { margin-top: 20px; }
+.agenda-calendar-preview h2 { margin: 0; font-size: 20px; }
+.agenda-calendar-events { padding-left: 22px; margin-block: 16px; }
+.agenda-calendar-events li { margin-bottom: 14px; }
+.agenda-calendar-events strong, .agenda-calendar-events time, .agenda-calendar-events small { display: block; }
+.agenda-calendar-events time { font-variant-numeric: tabular-nums; }
+.agenda-calendar-events small { color: var(--muted); }
 .job-comparison { margin: 20px 0; padding: 20px; border: 1px solid var(--line); background: var(--paper); border-radius: 12px; min-width: 0; }
 .job-comparison-heading { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
 .employer-response-form { margin: 12px 0 20px; padding: 16px 0; border-block: 1px solid var(--line); }

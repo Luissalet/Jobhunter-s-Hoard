@@ -1,5 +1,7 @@
 # Jobhunter's Hoard
 
+En **Seguimiento → Llevar estas fechas al calendario**, prepara una vista previa y descarga ICS con las entrevistas o próximas revisiones guardadas de la lista actual. Sólo se envían sus IDs visibles; la vista previa y el archivo son el mismo resultado nativo (`export_job_calendar {jobIds, kind: interview|review}`, también `POST /api/jobs/calendar`). Las fechas con zona se exportan en UTC; las horas sin zona se identifican como flotantes, en la zona de la agenda de destino, y las fechas solas como días completos. Las ausentes o inválidas muestran su motivo. No se inventan fechas, duración, alarmas, asistentes ni entrevistas, ni se modifican registros o calendarios externos. Cambiar lista/contexto/filas invalida la vista previa. Es una instantánea, sin sincronización automática.
+
 En **Candidaturas**, selecciona dos o más ofertas y pulsa **Comparar ofertas**.
 La tabla reúne ubicación, modalidad, salario publicado y rango guardado con su
 moneda y periodo, estado, encaje previo, fechas y notas. Puedes abrir cada oferta

@@ -160,6 +160,10 @@ const sizeOf = (value) => Buffer.byteLength(JSON.stringify(value, (k, v) => (typ
 /** Keep a tool result under ~`limit` bytes of JSON (same rules as hoard_link.agentkit.cap_result): the largest top-level list is
  * halved until it fits, one huge string is cut, and a "truncated" block says what was cut. A list result becomes { result: [...] }. */
 export function capResult(data, limit = 20000) {
+  if (data !== null && typeof data === "object" && !Array.isArray(data) && data.__uncapped === true) {
+    const { __uncapped, ...result } = data;
+    return result;
+  }
   if (Array.isArray(data)) {
     const wrapped = { result: data };
     const capped = capResult(wrapped, limit);

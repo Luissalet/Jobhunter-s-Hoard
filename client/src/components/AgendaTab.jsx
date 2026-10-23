@@ -3,6 +3,7 @@ import { api, statusLabel } from "../api.js";
 import { agendaGroups, localDateValue } from "../job-insights.js";
 import Icon from "./Icon.jsx";
 import { useCopilotContext } from "../copilot-hooks.js";
+import AgendaCalendar from "./AgendaCalendar.jsx";
 
 export default function AgendaTab({ jobs, replaceJob, openDetail, notify }) {
   const [view, setView] = useState("due"), [busy, setBusy] = useState({});
@@ -26,6 +27,7 @@ export default function AgendaTab({ jobs, replaceJob, openDetail, notify }) {
     patch(job, { nextActionAt: localDateValue(date) + "T09:00:00" });
   };
   return <div className="agenda-workspace">
+    <AgendaCalendar jobs={groups[view]} view={view} label={tabs.find(([id]) => id === view)[1]} />
     {groups.unplanned.length > 0 && <div className="context-notice"><Icon name="calendar" /><div><strong>{groups.unplanned.length} candidaturas abiertas sin próxima acción</strong><p>Una candidatura importada puede no tener fecha de envío. Planifica cuándo revisarla para que aparezca en tu agenda.</p></div><button className="btn-ghost" onClick={() => setView("unplanned")}>Planificar</button></div>}
     <div className="filter-tabs agenda-tabs" aria-label="Vistas de seguimiento">{tabs.map(([id, label]) => <button key={id} className={view === id ? "selected" : ""} aria-pressed={view === id} onClick={() => setView(id)}>{label}<span>{groups[id].length}</span></button>)}</div>
     <p className="supporting-copy">{view === "interviews" ? `Entrevistas de hoy y de los próximos 14 días. Horas mostradas en la zona del ordenador: ${Intl.DateTimeFormat().resolvedOptions().timeZone}.` : view === "unplanned" ? "Elige una fecha para volver a revisar cada candidatura." : "El recordatorio organiza tu trabajo; redactar un mensaje no lo envía."}</p>
