@@ -26,6 +26,14 @@ The app starts at `http://127.0.0.1:5178` or the next free port and reports the 
 
 ## Connect an assistant
 
+In **Applications**, select two or more offers and choose **Compare offers**.
+The table places their saved location, work mode, published and structured salary,
+status, previous fit score, follow-up dates and notes side by side. Open an offer
+from its heading or copy the whole comparison as text. Unknown facts remain
+explicit; currencies and pay periods are kept as recorded. No new score,
+currency conversion or application change is made. The same native comparison is
+available as MCP `compare_jobs {jobIds}` and `POST /api/jobs/compare`.
+
 **Connect AI** provides MCP stdio settings for a compatible local client. Keep Jubhunter's Hoard open while using it. The client supplies its own model and browser; the app supplies context and the application record. No second AI key is needed for MCP. Internal analysis and generation buttons can use a provider configured in **Settings**.
 
 The stdio adapter forwards calls to the authenticated localhost server. Only that server writes the database, so multiple assistants do not keep conflicting copies. Tools cover contexts and sources, reading and searching evidence, listing and capturing offers, recording verified facts, preparing applications, employer responses and saved answers. A web chat cannot gain access by pasting an address or prompt.

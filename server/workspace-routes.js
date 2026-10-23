@@ -263,6 +263,7 @@ export function installWorkspaceRoutes(app, port) {
     "/api/jobs/:id/application",
     route((req) => prepareApplication(req.params.id)),
   );
+  app.post('/api/jobs/compare', route(req => callTool('compare_jobs', req.body)));
   app.put(
     "/api/jobs/:id/draft",
     route((req) => saveDraft(req.params.id, req.body)),

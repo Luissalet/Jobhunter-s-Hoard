@@ -2,6 +2,7 @@ import { z } from "zod";
 import { userError } from "./errors.js";
 import { rememberAnswer, answerSchema } from "./answer-library.js";
 import * as store from "./store.js";
+import { compareJobs } from "./job-comparison.js";
 import {
   contextFor,
   buildContext,
@@ -46,6 +47,8 @@ const tool = (name, description, schema, readOnly, run, idempotent = readOnly) =
   run,
 });
 export const TOOLS = [
+  tool('compare_jobs', 'Comparar ofertas guardadas: modalidad, ubicación, salarios con su moneda y periodo, estado, encaje previo y notas. Compare saved job offers. Devuelve tabla y texto portable; no convierte salarios, no evalúa de nuevo ni modifica candidaturas.',
+    z.object({jobIds:z.array(id).min(2)}), true, ({jobIds}) => compareJobs(jobIds)),
   tool("remember_answer", "Añadir una pregunta nueva a la colección de respuestas sin sobrescribir las existentes. Remember an answer.\nAñadir una pregunta nueva a la colección sin sobrescribir respuestas existentes. Dejar answer vacío si falta el dato; scope application para respuestas específicas del formulario.", z.object({ contextId: id, entry: answerSchema }), false, ({ contextId, entry }) => rememberAnswer(contextId, entry)),
   tool(
     "list_contexts",
