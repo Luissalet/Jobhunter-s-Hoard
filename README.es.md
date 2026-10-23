@@ -61,7 +61,7 @@ Herramientas disponibles:
 | `record_application_result` | Registrar confirmación visible, bloqueo o resultado incierto. |
 | `record_employer_response` | Registrar un mensaje de la empresa (acuse, petición de información, rechazo, entrevista u oferta) por su id, de forma idempotente. |
 
-Son 15 herramientas en total. `GET /api/agent/config` y `list_tools` del propio cliente MCP siempre reflejan el recuento real.
+Son 16 herramientas en total. `GET /api/agent/config` y `list_tools` del propio cliente MCP siempre reflejan el recuento real.
 
 Las herramientas no exponen claves de proveedores ni permiten cambiar instrucciones, preferencias o fuentes permanentes. Esas decisiones se editan en la interfaz. Los documentos y las ofertas se identifican como datos de referencia, separados de las instrucciones del usuario.
 
@@ -81,7 +81,8 @@ Jubhunter's Hoard no abre sesiones, supera CAPTCHAs, acepta acuerdos ni ejecuta 
 - Abre una candidatura y usa **Oferta → Editar datos** para corregir sus datos y completar la fecha real de envío. Confirma con **Guardar datos**; deja la fecha vacía si no la conoces.
 - En **Seguimiento → Sin próxima acción**, programa la próxima revisión de candidaturas enviadas, con respuesta o en entrevista que aún no tienen revisión ni entrevista futura. Puedes elegir una fecha o **Revisar mañana**, aunque falte la fecha de envío. **Redactar mensaje** prepara un borrador; no lo envía.
 - **Resultados** incluye rechazos entre las respuestas y conserva hitos de entrevista y oferta registrados en el historial. Compara estado actual, modalidad, actividad de ocho semanas y fuente. Los envíos sin fecha cuentan en los totales, pero no en la actividad semanal.
-- En la ficha de una candidatura, la pestaña **Actividad** lista también las respuestas de la empresa (acuse, petición de información, rechazo, entrevista u oferta) que el asistente registró con `record_employer_response`, con su fecha y evidencia recortada. Un acuse de recibo nunca cambia el estado ni equivale a una entrevista.
+- En la ficha de una candidatura, la pestaña **Actividad** lista también las respuestas de la empresa (acuse, petición de información, rechazo, entrevista u oferta) que el asistente registró con `record_employer_response`, con su fecha y evidencia. Un acuse de recibo nunca cambia el estado ni equivale a una entrevista.
+- En **Actividad → Registrar respuesta recibida**, guarda manualmente los seis tipos nativos, el texto recibido, su fecha/hora, notas y referencia del mensaje. Para entrevistas puedes anotar la fecha, que aparecerá en Seguimiento. El formulario identifica la zona del ordenador y usa el mismo `POST /api/jobs/:id/responses` que MCP `record_employer_response`. Conserva borrador y referencia si falla; repetir una referencia no duplica ni reemplaza la respuesta existente. Las evidencias largas se despliegan con **Leer respuesta completa**. No consulta correo ni envía mensajes o crea eventos remotos.
 - En **Mi contexto → Respuestas**, busca por pregunta o respuesta, copia un texto o edítalo. **Terminar edición** cierra la fila; **Guardar cambios** guarda tus modificaciones.
 - En **Mi contexto → Cartas**, crea o selecciona una carta, edita su nombre, idioma español/inglés y texto base. Puedes incluir `{{puesto}}` y `{{empresa}}`. **Puesto** y **Empresa** cambian solo la vista previa; **Copiar carta preparada** copia el resultado cuando las variables están completas. **Guardar cambios** guarda las plantillas de ese contexto, incluidas altas, ediciones y eliminaciones.
 

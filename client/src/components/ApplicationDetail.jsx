@@ -8,6 +8,8 @@ import { confirmDiscard, useUnsavedChanges } from "../useUnsavedChanges.js";
 import { useOpenDialog } from "../useDialog.js";
 import { useCopilotContext } from "../copilot-hooks.js";
 import { changedFields, rebaseForm, draftToSave, clip, clipFields } from "../copilot-context.js";
+import EmployerResponseForm from './EmployerResponseForm.jsx';
+import { newResponseDraft, responsePayload } from '../employer-response.js';
 
 // The draft as the form shows it: the saved one, or the tailored texts when nothing was saved yet.
 const draftOf = (job) =>
@@ -27,12 +29,17 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
     [offerEdit, setOfferEdit] = useState(null),
     [draft, setDraft] = useState(() => draftOf(job)),
     [dirty, setDirty] = useState(false);
+  const [responseDraft, setResponseDraft] = useState(newResponseDraft),
+    [responseDirty, setResponseDirty] = useState(false),
+    [responseError, setResponseError] = useState(''),
+    [responseMessage, setResponseMessage] = useState('');
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   // What the server had when each form was last in step with it: a reload (the assistant worked meanwhile) moves the fields the
   // user has not touched to the new values and keeps the ones being edited; a save sends only what the user changed.
   const draftBase = useRef(draftOf(job)),
     notesBase = useRef(job.notes || ""),
     offerBase = useRef(null);
-  const pending = dirty || notes !== (job.notes || "") || !!offerEdit;
+  const pending = dirty || notes !== (job.notes || "") || !!offerEdit || responseDirty || busy === 'response';
   useUnsavedChanges(pending);
   const requestClose = () => {
     if (confirmDiscard(pending)) close();
@@ -70,6 +77,7 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
         offerEdit && { kind: "job-offer", object_id: job.id, dirty: offerChanged.length > 0, changed: offerChanged, fields: clipFields(offerEdit) },
         notes !== (job.notes || "") && { kind: "job-notes", object_id: job.id, dirty: true, fields: { notes: clip(notes, 1500) } },
         dirty && { kind: "job-draft", object_id: job.id, dirty: true, changed: draftChanged, fields: { lang: draft.lang, cvMarkdown: clip(draft.cvMarkdown, 1500), letterMarkdown: clip(draft.letterMarkdown, 1500), answers: (draft.answers || []).map((a) => ({ question: a.question, answer: clip(a.answer, 300) })), missing: draft.missing } },
+        responseDirty && { kind: 'employer-response', object_id: job.id, dirty: true, fields: clipFields({...responseDraft, timezone}) },
       ].filter(Boolean),
     };
   });
@@ -89,6 +97,20 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
     setDraft((d) => ({ ...d, [key]: value }));
     setDirty(true);
   };
+  async function saveResponse(event) {
+    event.preventDefault();
+    setBusy('response'); setResponseError(''); setResponseMessage('');
+    try {
+      const saved = await api.recordResponse(job.id, responsePayload(responseDraft, timezone));
+      await refresh();
+      setResponseDraft(newResponseDraft()); setResponseDirty(false);
+      setResponseMessage(saved.applied ? 'Respuesta registrada. El historial ya está actualizado.' : 'Esta referencia ya estaba registrada. Se mantiene la respuesta existente.');
+    } catch (cause) {
+      setResponseError(cause.message);
+    } finally {
+      setBusy('');
+    }
+  }
   return (
     <>
     <div className="dialog-scrim" aria-hidden="true" />
@@ -415,6 +437,9 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
               ))
             )}
             <h3>Respuestas de la empresa</h3>
+            <EmployerResponseForm draft={responseDraft} timezone={timezone} busy={!!busy} error={responseError} message={responseMessage}
+              onChange={value => {setResponseDraft(value); setResponseDirty(true); setResponseMessage('');}}
+              onSubmit={saveResponse}/>
             {!job.responses?.length ? (
               <p>Sin respuestas registradas todavía.</p>
             ) : (
@@ -433,11 +458,13 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
                     }
                   </strong>
                   <time>{new Date(r.receivedAt).toLocaleString("es-ES")}</time>
-                  <p>
+                  <p className="preserve-lines">
                     {r.evidence.length > 280
                       ? `${r.evidence.slice(0, 280)}…`
                       : r.evidence}
                   </p>
+                  {r.evidence.length > 280 && <details className="response-evidence"><summary>Leer respuesta completa</summary><p className="preserve-lines">{r.evidence}</p></details>}
+                  {r.externalId && <p className="response-reference">Referencia: {r.externalId}</p>}
                   {r.interviewAt && (
                     <p>
                       Entrevista: {new Date(r.interviewAt).toLocaleString("es-ES")}

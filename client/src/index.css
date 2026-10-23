@@ -1944,6 +1944,15 @@ h2, h3 { color: var(--hoard-text); }
 }
 .job-comparison { margin: 20px 0; padding: 20px; border: 1px solid var(--line); background: var(--paper); border-radius: 12px; min-width: 0; }
 .job-comparison-heading { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+.employer-response-form { margin: 12px 0 20px; padding: 16px 0; border-block: 1px solid var(--line); }
+.employer-response-form > summary, .response-evidence > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 10px 0; }
+.employer-response-form fieldset { border: 0; padding: 0; min-width: 0; }
+.employer-response-form .field { margin-bottom: 18px; }
+.response-timezone, .response-reference { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.response-timezone { margin: 0 0 18px; }
+.response-error { color: var(--hoard-text); font-weight: 600; margin-top: 12px; }
+.response-feedback { color: var(--accent); margin-top: 12px; }
+.response-evidence p, .activity-entry .preserve-lines { overflow-wrap: anywhere; }
 .job-comparison h2 { margin: 0; font-size: 21px; }
 .job-comparison-heading p { margin: 5px 0 12px; color: var(--muted); }
 .job-comparison-scroll { max-width: 100%; overflow-x: auto; margin-top: 16px; }
