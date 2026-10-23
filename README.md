@@ -40,6 +40,8 @@ The stdio adapter forwards calls to the authenticated localhost server. Only tha
 
 ## Import, export and data
 
+In an application’s **Actividad → Registrar respuesta recibida**, manually record an employer message: native response type, evidence, received date/time, optional interview date, notes and message reference. The form identifies the computer’s time zone and reuses the existing response API/MCP operation. An acknowledgment keeps status unchanged; a dated interview appears in Follow-up. Failed saves preserve the draft/reference, and retrying the same reference does not duplicate or replace a recorded response. Long evidence can be expanded. No mail lookup, message sending, model request or remote calendar event occurs.
+
 Paste a Google Sheet range or import CSV/TSV with columns such as link, company, role, status, location, notes and date. Preview detects duplicates and unknown states before import; missing historical dates remain unknown. The limit is 2,000 rows per import, with no continuous Google Sheets sync. CSV export includes work mode and context; JSON backup includes the full record, settings, profile and contexts but excludes linked source files and the MCP credential.
 
 Local files under `data/` include `db.json`, `profile.md` and `mcp-token`. The token is generated on startup and is excluded from backups. Data is stored locally without app-level encryption. An external AI provider receives the dossier when its internal buttons are used; an external assistant receives only the data it queries through MCP. The health endpoint exposes service status without personal data.
