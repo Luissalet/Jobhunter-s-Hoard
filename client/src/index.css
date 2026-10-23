@@ -1026,6 +1026,17 @@ time {
   border-top: 1px solid var(--line);
   padding-top: 22px;
 }
+.source-search { margin: 22px 0 28px; padding: 22px 0; border-block: 1px solid var(--line); }
+.source-search-form { display: flex; align-items: end; gap: 12px; }
+.source-search-form .field { flex: 1; min-width: 0; margin: 0; }
+.source-search-form button { flex-shrink: 0; }
+.source-search-results { list-style: none; padding: 0; }
+.source-search-results > li { padding: 18px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.source-search-results pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin-top: 10px; max-width: 75ch; }
+.source-search-meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.source-search-errors { margin-top: 16px; overflow-wrap: anywhere; }
+.source-search-errors li { margin-top: 8px; }
+@media (max-width: 600px) { .source-search-form { align-items: stretch; flex-direction: column; } }
 .source-preview pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

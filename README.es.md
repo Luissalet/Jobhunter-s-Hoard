@@ -10,6 +10,13 @@ La misma función nativa está en MCP `compare_jobs {jobIds}` y en
 
 [English](README.md)
 
+En **Mi contexto → Fuentes**, **Buscar en fuentes enlazadas** consulta el texto
+actual de las fuentes activadas sin IA ni descarga de enlaces. Muestra un extracto
+por documento, procedencia, errores y cobertura: hasta 60 archivos y sus primeros
+20.000 caracteres. No encontrar texto no demuestra su ausencia fuera de esos
+límites. Comparte la función MCP `search_context` mediante
+`GET /api/contexts/:id/search?query=...`; consultar no modifica las fuentes.
+
 Espacio local para buscar empleo con un asistente: perfil reutilizable, contextos de búsqueda, documentos enlazados, preparación de candidaturas y registro de resultados por MCP.
 
 ## Abrir

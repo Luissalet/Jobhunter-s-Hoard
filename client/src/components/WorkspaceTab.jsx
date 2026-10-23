@@ -3,6 +3,7 @@ import { useUnsavedChanges } from "../useUnsavedChanges.js";
 import { api } from "../api.js";
 import Icon from "./Icon.jsx";
 import LettersLibrary from "./LettersLibrary.jsx";
+import SourceSearch from "./SourceSearch.jsx";
 import { useCopilotContext, useCopilotRefresh } from "../copilot-hooks.js";
 import { changedFields, rebaseForm, rebaseContext, contextToSave, clip, clipFields } from "../copilot-context.js";
 export function Field({ label, children, hint, ...props }) {
@@ -879,6 +880,7 @@ export default function WorkspaceTab({
                 Enlazar fuente
               </button>
             </div>
+            <SourceSearch key={context.id} context={context} />
             {!context.sources?.length && !showSource && (
               <div className="source-empty">
                 <Icon name="folder" width="32" height="32" />
