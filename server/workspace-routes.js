@@ -8,7 +8,6 @@ import {
   addSource,
   editSource,
   buildContext,
-  readSource,
   listSourceFiles,
   contextFor,
 } from "./context.js";
@@ -238,11 +237,13 @@ export function installWorkspaceRoutes(app, port) {
   app.get(
     "/api/contexts/:id/sources/:sourceId/read",
     route((req) =>
-      readSource(
-        req.params.id,
-        req.params.sourceId,
-        String(req.query.file || ""),
-      ),
+      callTool("read_source", {
+        contextId: req.params.id,
+        sourceId: req.params.sourceId,
+        relativePath: String(req.query.file || ""),
+        offset: req.query.offset === undefined ? 0 : Number(req.query.offset),
+        limit: req.query.limit === undefined ? 12000 : Number(req.query.limit),
+      }),
     ),
   );
   app.post(
