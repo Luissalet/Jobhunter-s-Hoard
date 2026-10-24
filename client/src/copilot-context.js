@@ -90,6 +90,8 @@ export function jobObject(j) {
   return {
     kind: "job", object_id: j.id, title: j.title,
     ...pick(j, ["company", "status", "location", "workMode", "salary", "score", "source", "appliedAt", "nextActionAt", "interviewAt", "url"]),
+    salaryMin: j.salaryMin ?? null, salaryMax: j.salaryMax ?? null,
+    salaryCurrency: j.salaryCurrency ?? null, salaryPeriod: j.salaryPeriod ?? null,
     context_id: j.contextId,
     ...(j.scoreDetails?.verdict ? { fit: j.scoreDetails.verdict } : {}),
     ...(j.notes ? { notes: clip(j.notes, 400) } : {}),

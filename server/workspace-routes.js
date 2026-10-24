@@ -268,6 +268,7 @@ export function installWorkspaceRoutes(app, port) {
     route((req) => prepareApplication(req.params.id)),
   );
   app.post('/api/jobs/compare', route(req => callTool('compare_jobs', req.body)));
+  app.post('/api/jobs/:id/facts', route(req => callTool('update_job_facts', { ...req.body, jobId: req.params.id })));
   app.post('/api/jobs/calendar', route(req => callTool('export_job_calendar', req.body)));
   app.put(
     "/api/jobs/:id/draft",

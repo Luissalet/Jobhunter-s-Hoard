@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, STATUSES, statusLabel } from "../api.js";
+import SalaryRange from './SalaryRange.jsx';
 import { Field } from "./WorkspaceTab.jsx";
 import { modeLabel } from "./ApplicationsTab.jsx";
 import Icon from "./Icon.jsx";
@@ -39,7 +40,8 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
   const draftBase = useRef(draftOf(job)),
     notesBase = useRef(job.notes || ""),
     offerBase = useRef(null);
-  const pending = dirty || notes !== (job.notes || "") || !!offerEdit || responseDirty || busy === 'response';
+  const [salaryPending, setSalaryPending] = useState(false);
+  const pending = dirty || notes !== (job.notes || "") || !!offerEdit || responseDirty || busy === 'response' || salaryPending;
   useUnsavedChanges(pending);
   const requestClose = () => {
     if (confirmDiscard(pending)) close();
@@ -186,6 +188,7 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
         ))}
       </div>
       <div className="detail-body">
+        <div hidden={tab !== 'offer'}><SalaryRange key={job.id} job={job} refresh={refresh} onPending={setSalaryPending} /></div>
         {tab === "offer" && (
           <>
             <div className="section-heading"><h3>Datos de la oferta</h3>{!offerEdit && <button className="btn-ghost" onClick={() => { offerBase.current = offerForm(job); setOfferEdit(offerForm(job)); }}>Editar datos</button>}</div>

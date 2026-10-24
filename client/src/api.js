@@ -25,6 +25,7 @@ export const api = {
   importJobs: (items) => req('/api/jobs/import', { method: 'POST', body: { items } }),
   addJob: (body) => req('/api/jobs', { method: 'POST', body }),
   patchJob: (id, body) => req(`/api/jobs/${id}`, { method: 'PATCH', body }),
+  saveJobFacts: (id, body) => req(`/api/jobs/${id}/facts`, { method: 'POST', body }),
   recordResponse: (id, body) => req(`/api/jobs/${id}/responses`, { method: 'POST', body }),
   deleteJob: (id) => req(`/api/jobs/${id}`, { method: 'DELETE' }),
   score: (id) => req(`/api/jobs/${id}/score`, { method: 'POST', body: {} }),
