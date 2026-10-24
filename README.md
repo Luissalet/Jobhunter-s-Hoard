@@ -1,5 +1,7 @@
 # Jobhunter's Hoard
 
+In **My context → Sources → View**, read the next and previous fragments of the linked source's extracted text. The native `read_source` cursor, source/file, modification date and extracted total are shown; these positions use UTF-16 units, not physical document pages. Each fragment reads the current source, so the file may change between reads. A failed read retains the last valid fragment and retries the same position. URL sources expose only pasted text, never download the page. The existing GET source-read route accepts offset/limit and delegates to the validated MCP operation; the 17 tools, extraction limits and MCP response cap are unchanged. The interface remains Spanish.
+
 In an application's **Offer → Saved salary range**, edit the recorded minimum,
 maximum, three-character currency code and year/month/hour period. Only changed
 fields are saved through the existing `update_job_facts` operation, also exposed

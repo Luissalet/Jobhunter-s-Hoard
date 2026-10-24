@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import Icon from "./Icon.jsx";
 import LettersLibrary from "./LettersLibrary.jsx";
 import SourceSearch from "./SourceSearch.jsx";
+import SourceReader from "./SourceReader.jsx";
 import { useCopilotContext, useCopilotRefresh } from "../copilot-hooks.js";
 import { changedFields, rebaseForm, rebaseContext, contextToSave, clip, clipFields } from "../copilot-context.js";
 export function Field({ label, children, hint, ...props }) {
@@ -438,12 +439,7 @@ export default function WorkspaceTab({
   const sourceAction = async (s, action) => {
     try {
       if (action === "read")
-        setSourcePreview({
-          source: s,
-          result: await api.workspace(
-            `/api/contexts/${context.id}/sources/${s.id}/${s.kind === "folder" ? "files" : "read"}`,
-          ),
-        });
+        setSourcePreview(previous => ({ source: s, revision: (previous?.revision || 0) + 1 }));
       else {
         await api.workspace(
           `/api/contexts/${context.id}/sources/${s.id}`,
@@ -1056,64 +1052,7 @@ export default function WorkspaceTab({
               </form>
             )}
             {sourcePreview && (
-              <section className="source-preview">
-                <div className="section-heading">
-                  <h3>{sourcePreview.source.label}</h3>
-                  <button
-                    className="icon-button"
-                    aria-label="Cerrar vista previa"
-                    onClick={() => setSourcePreview(null)}
-                  >
-                    <Icon name="close" />
-                  </button>
-                </div>
-                {sourcePreview.result.files ? (
-                  <>
-                    <p>
-                      {sourcePreview.result.files.length} archivos disponibles
-                      {sourcePreview.result.truncated
-                        ? " · listado parcial"
-                        : ""}
-                    </p>
-                    <ul>
-                      {sourcePreview.result.files.map((file) => (
-                        <li key={file}>
-                          <button
-                            className="text-action"
-                            onClick={async () => {
-                              try {
-                                setSourcePreview({
-                                  source: sourcePreview.source,
-                                  result: await api.workspace(
-                                    `/api/contexts/${context.id}/sources/${sourcePreview.source.id}/read?file=${encodeURIComponent(file)}`,
-                                  ),
-                                });
-                              } catch (e) {
-                                notify(e.message);
-                              }
-                            }}
-                          >
-                            {file}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <>
-                    <pre>
-                      {sourcePreview.result.content ||
-                        "Sin texto pegado. El enlace queda disponible para tu asistente."}
-                    </pre>
-                    {sourcePreview.result.truncated && (
-                      <p>
-                        Vista previa parcial. La IA puede continuar leyendo por
-                        páginas.
-                      </p>
-                    )}
-                  </>
-                )}
-              </section>
+              <SourceReader key={`${context.id}:${sourcePreview.source.id}:${sourcePreview.revision}`} contextId={context.id} contextName={context.name} source={sourcePreview.source} onClose={() => setSourcePreview(null)} />
             )}
           </>
         )}

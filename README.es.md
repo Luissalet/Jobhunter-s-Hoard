@@ -1,5 +1,7 @@
 # Jobhunter's Hoard
 
+En **Mi contexto → Fuentes → Ver**, lee los fragmentos siguientes y anteriores del texto extraído de una fuente. Se muestran el cursor nativo de `read_source`, fuente/archivo, fecha de modificación y total extraído; las posiciones son unidades UTF-16, no páginas físicas del documento. Cada fragmento lee la fuente actual y el archivo puede cambiar entre lecturas. Un fallo conserva el último fragmento válido y permite reintentar la misma posición. Los enlaces muestran sólo texto pegado, sin descargar la página. El GET de lectura existente acepta offset/limit y delega en la operación MCP validada; las 17 herramientas, límites de extracción y cap del transporte MCP no cambian.
+
 En **Oferta → Rango salarial guardado** puedes editar mínimo, máximo, código de
 moneda de tres caracteres y periodo año/mes/hora. Sólo se envían los campos
 cambiados a `update_job_facts`, también en `POST /api/jobs/:id/facts`. Un extremo
