@@ -1,5 +1,14 @@
 # Jobhunter's Hoard
 
+In an application's **Offer → Saved salary range**, edit the recorded minimum,
+maximum, three-character currency code and year/month/hour period. Only changed
+fields are saved through the existing `update_job_facts` operation, also exposed
+at `POST /api/jobs/:id/facts`. An empty bound means unknown; zero stays zero.
+The published salary text remains separate. Amounts and periods are not estimated
+or converted. Updating facts retains documents and invalidates their previous
+review according to the native operation; an active attempt cannot be changed.
+Later edits and drafts in the other sections stay pending after a save.
+
 In **Follow-up**, **Llevar estas fechas al calendario** previews and downloads an ICS snapshot of the current list's saved interview or next-review dates. Only visible candidate IDs are sent to the native `export_job_calendar {jobIds, kind}` tool (`kind: interview|review`), also exposed at `POST /api/jobs/calendar`. Preview and download share one result. Offset/Z timestamps export as UTC, stored times without a zone remain clearly labeled floating times, and date-only values remain all-day dates. Missing or invalid dates are listed with their reason. No dates, durations, alarms, attendees or interviews are inferred; no record or external calendar is changed. Switching list/context/rows invalidates the preview. No automatic synchronization is created.
 
 In **My context → Sources**, **Search linked sources** searches the current text

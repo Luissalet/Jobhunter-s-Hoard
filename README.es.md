@@ -1,5 +1,13 @@
 # Jobhunter's Hoard
 
+En **Oferta → Rango salarial guardado** puedes editar mínimo, máximo, código de
+moneda de tres caracteres y periodo año/mes/hora. Sólo se envían los campos
+cambiados a `update_job_facts`, también en `POST /api/jobs/:id/facts`. Un extremo
+vacío es desconocido; cero se conserva. El salario publicado sigue independiente:
+no se estima ni se convierten importes o periodos. La operación nativa conserva
+documentos e invalida su revisión previa; no modifica un intento en curso.
+Las ediciones posteriores y los borradores de otras secciones siguen pendientes.
+
 En **Seguimiento → Llevar estas fechas al calendario**, prepara una vista previa y descarga ICS con las entrevistas o próximas revisiones guardadas de la lista actual. Sólo se envían sus IDs visibles; la vista previa y el archivo son el mismo resultado nativo (`export_job_calendar {jobIds, kind: interview|review}`, también `POST /api/jobs/calendar`). Las fechas con zona se exportan en UTC; las horas sin zona se identifican como flotantes, en la zona de la agenda de destino, y las fechas solas como días completos. Las ausentes o inválidas muestran su motivo. No se inventan fechas, duración, alarmas, asistentes ni entrevistas, ni se modifican registros o calendarios externos. Cambiar lista/contexto/filas invalida la vista previa. Es una instantánea, sin sincronización automática.
 
 En **Candidaturas**, selecciona dos o más ofertas y pulsa **Comparar ofertas**.
