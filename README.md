@@ -107,4 +107,6 @@ The vendored copy is maintained by HoardLink’s sync script. Windows validation
 
 ## Skills
 
-The `skills` block of `faustus-plugin.json` names the procedures of the family's skill library that fit this app's work: `job-application-tracking`, `pretask-interview`. The hub's Skills tab shows and changes them. This app does not hand them to connecting agents yet.
+The `skills` block of `faustus-plugin.json` names the procedures of the family's skill library that fit this app's work: `job-application-tracking`, `pretask-interview`. The hub's Skills tab shows and changes them. The MCP bridge serves the local shelf through `skills_list`, `skill_read`, connection instructions and `skill-<slug>` prompts, including when the library is offline.
+
+The complete Node commons copy is synchronized from the Hub. Calendar snapshots marked `__uncapped` retain every event and the complete ICS through HTTP and MCP; the internal marker is omitted from responses. Ordinary tool results retain their normal cap. The regression test verifies 1,100 events and a response larger than 500 KB with a real MCP client.
