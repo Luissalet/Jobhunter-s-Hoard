@@ -104,3 +104,7 @@ Tests use temporary directories and an isolated UI fixture. Product and design d
 Scanned source PDFs use Kafka through the family document client; the existing local reader remains available when the owner cannot be reached.
 
 The vendored copy is maintained by HoardLink’s sync script. Windows validation and the family service contract are documented in HoardLink’s `docs/commons/windows-validation.md` and `docs/commons/services.md`.
+
+## Skills
+
+The `skills` block of `faustus-plugin.json` names the procedures of the family's skill library that fit this app's work: `job-application-tracking`, `pretask-interview`. The hub's Skills tab shows and changes them. This app does not hand them to connecting agents yet.
