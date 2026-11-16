@@ -9,6 +9,7 @@ import { ingestPosting } from "./ingest.js";
 import {
   llmJson,
   scorePrompt,
+  fitPrompt,
   tailorPrompt,
   followupPrompt,
   prepPrompt,
@@ -16,7 +17,8 @@ import {
 import { renderDocPage } from "./render.js";
 import { installWorkspaceRoutes } from "./workspace-routes.js";
 import * as family from "./hoard-link.js";
-import { contextPrompt, CONTEXT_RULES } from "./context.js";
+import { contextPrompt, contextFor, CONTEXT_RULES } from "./context.js";
+import { scoreJobFit } from "./fit-score.js";
 import { captureJob } from "./applications.js";
 import { createGuard, installSpa, installErrorHandlers, runServer } from "./hoard-commons/express.js";
 import { userErrors } from "./errors.js";
@@ -140,6 +142,27 @@ app.post("/api/jobs/:id/score", async (req, res) => {
       scoreDetails: details,
     });
     res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- Encaje por criterio ----------
+// El modelo solo describe requisitos, pesos y evidencia; la puntuación la calcula fit-score.js.
+app.post("/api/jobs/:id/fit", async (req, res) => {
+  try {
+    const job = store.getJob(req.params.id);
+    if (!job) return res.status(404).json({ error: "No existe" });
+    const profile = await contextPrompt(job.contextId);
+    if (!profile.trim())
+      return res
+        .status(400)
+        .json({ error: "Tu perfil está vacío. Rellénalo en Ajustes." });
+    const analysis = await llmJson(
+      fitPrompt(profile, job, contextFor(job.contextId).preferences),
+      { temperature: 0.3 },
+    );
+    res.json(scoreJobFit(job.id, analysis));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -1296,6 +1296,35 @@ time {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* Encaje por criterio: la tabla se lee en el panel estrecho de la ficha. */
+.fit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0;
+}
+.fit-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--hoard-text-muted);
+  padding: 4px 6px 4px 0;
+  border-bottom: 1px solid var(--hoard-border);
+}
+.fit-table td {
+  padding: 5px 6px 5px 0;
+  border-bottom: 1px solid var(--hoard-border);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.fit-table td small {
+  display: block;
+  color: var(--hoard-text-muted);
+  font-size: 11px;
+}
+.fit-strong { color: #4ade80; }
+.fit-partial { color: #fbbf24; }
+.fit-missing { color: #fb7185; }
+.fit-na { color: var(--hoard-text-muted); }
 .document-links {
   display: flex;
   flex-wrap: wrap;

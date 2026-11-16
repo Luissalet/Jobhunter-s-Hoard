@@ -29,6 +29,7 @@ export const api = {
   recordResponse: (id, body) => req(`/api/jobs/${id}/responses`, { method: 'POST', body }),
   deleteJob: (id) => req(`/api/jobs/${id}`, { method: 'DELETE' }),
   score: (id) => req(`/api/jobs/${id}/score`, { method: 'POST', body: {} }),
+  fit: (id) => req(`/api/jobs/${id}/fit`, { method: 'POST', body: {} }),
   tailor: (id, lang) => req(`/api/jobs/${id}/tailor`, { method: 'POST', body: { lang } }),
   followup: (id, lang) => req(`/api/jobs/${id}/followup`, { method: 'POST', body: { lang } }),
   prep: (id, lang) => req(`/api/jobs/${id}/prep`, { method: 'POST', body: { lang } }),

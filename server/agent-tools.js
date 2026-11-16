@@ -4,6 +4,7 @@ import { rememberAnswer, answerSchema } from "./answer-library.js";
 import * as store from "./store.js";
 import { compareJobs } from "./job-comparison.js";
 import { exportJobCalendar } from "./job-calendar.js";
+import { fitInputSchema, getJobFit, rankJobsByFit, scoreJobFit } from "./fit-score.js";
 import {
   contextFor,
   buildContext,
@@ -53,6 +54,14 @@ export const TOOLS = [
     ({ jobIds, kind }) => Object.defineProperty(exportJobCalendar(jobIds, kind), '__uncapped', { value: true })),
   tool('compare_jobs', 'Comparar ofertas guardadas: modalidad, ubicación, salarios con su moneda y periodo, estado, encaje previo y notas. Compare saved job offers. Devuelve tabla y texto portable; no convierte salarios, no evalúa de nuevo ni modifica candidaturas.',
     z.object({jobIds:z.array(id).min(2)}), true, ({jobIds}) => compareJobs(jobIds)),
+  tool('score_job_fit', 'Guardar el encaje de una oferta requisito por requisito: peso de cada requisito, evidencia del CV y de la oferta, carencias que bloquean y plan de candidatura. Score a job against the CV. La puntuación la calcula la app con los pesos; no la escribe el modelo. Un peso deducido del mercado nunca es crítico y una cita obligatoria sin texto deja de ser obligatoria.',
+    z.object({ jobId: id, analysis: fitInputSchema }), false,
+    ({ jobId, analysis }) => scoreJobFit(jobId, analysis)),
+  tool('get_job_fit', 'Leer el encaje guardado de una oferta con sus criterios, carencias y plan. Get job fit. No evalúa ni modifica nada.',
+    z.object({ jobId: id }), true, ({ jobId }) => getJobFit(jobId)),
+  tool('rank_jobs_by_fit', 'Ordenar las ofertas con encaje de mayor a menor para decidir a cuál dedicar el tiempo. Rank jobs by fit. Solo lee; no evalúa ni cambia candidaturas.',
+    z.object({ contextId: id.optional(), limit: z.number().int().min(1).max(100).default(20) }), true,
+    (a) => rankJobsByFit(a)),
   tool("remember_answer", "Añadir una pregunta nueva a la colección de respuestas sin sobrescribir las existentes. Remember an answer.\nAñadir una pregunta nueva a la colección sin sobrescribir respuestas existentes. Dejar answer vacío si falta el dato; scope application para respuestas específicas del formulario.", z.object({ contextId: id, entry: answerSchema }), false, ({ contextId, entry }) => rememberAnswer(contextId, entry)),
   tool(
     "list_contexts",

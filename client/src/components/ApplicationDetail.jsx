@@ -12,6 +12,26 @@ import { changedFields, rebaseForm, draftToSave, clip, clipFields } from "../cop
 import EmployerResponseForm from './EmployerResponseForm.jsx';
 import { newResponseDraft, responsePayload } from '../employer-response.js';
 
+const IMPORTANCE_LABELS = {
+  critical: "Crítico",
+  high: "Alto",
+  meaningful: "Medio",
+  preferred: "Deseable",
+  low_signal: "Bajo",
+};
+const MATCH_LABELS = {
+  strong: "Cumple",
+  partial: "Parcial",
+  missing: "Falta",
+  na: "No aplica",
+};
+const MATCH_CLASS = {
+  strong: "fit-strong",
+  partial: "fit-partial",
+  missing: "fit-missing",
+  na: "fit-na",
+};
+
 // The draft as the form shows it: the saved one, or the tailored texts when nothing was saved yet.
 const draftOf = (job) =>
   job.application?.draft || {
@@ -252,6 +272,83 @@ export default function ApplicationDetail({ job, close, notify, refresh }) {
                 <p>
                   Tu IA conectada puede evaluar la oferta. El análisis desde
                   este botón usa el proveedor configurado en Ajustes.
+                </p>
+              )}
+            </section>
+            <section>
+              <div className="section-heading">
+                <h3>Encaje por criterio</h3>
+                <button
+                  className="btn-ghost"
+                  disabled={!!busy}
+                  onClick={() => action("fit", () => api.fit(job.id))}
+                >
+                  {busy === "fit" ? "Analizando…" : job.fit ? "Repuntuar criterios" : "Analizar por criterio"}
+                </button>
+              </div>
+              {job.fit ? (
+                <>
+                  <p>
+                    <strong>{job.fit.score}/100</strong> · {job.fit.decisionLabel}
+                  </p>
+                  <table className="fit-table">
+                    <thead>
+                      <tr>
+                        <th>Requisito</th>
+                        <th>Peso</th>
+                        <th>Encaje</th>
+                        <th>Evidencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {job.fit.criteria.map((c, i) => (
+                        <tr key={i}>
+                          <td>{c.requirement}</td>
+                          <td>{IMPORTANCE_LABELS[c.importance] || c.importance}</td>
+                          <td className={MATCH_CLASS[c.match] || ""}>{MATCH_LABELS[c.match] || c.match}</td>
+                          <td>
+                            {c.cvEvidence || c.gap || "—"}
+                            {c.jdSignal && <small>Oferta: «{c.jdSignal}»</small>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {job.fit.blocking.length > 0 && (
+                    <>
+                      <h4>Carencias que pesan</h4>
+                      <ul>
+                        {job.fit.blocking.map((b, i) => (
+                          <li key={i}>
+                            {b.requirement}: {b.gap || "sin evidencia en el perfil"}
+                            {b.mitigation && ` · ${b.mitigation}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {job.fit.plan.length > 0 && (
+                    <>
+                      <h4>Plan de candidatura</h4>
+                      <ol>
+                        {job.fit.plan.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
+                  {job.fit.downgraded.length > 0 && (
+                    <p>
+                      Peso corregido por falta de respaldo en la oferta:{" "}
+                      {job.fit.downgraded.join(" · ")}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>
+                  Cada requisito con su peso, la cita del CV que lo sostiene y
+                  lo que falta. La puntuación se calcula con los pesos, no la
+                  escribe el modelo.
                 </p>
               )}
             </section>

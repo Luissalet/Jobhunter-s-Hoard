@@ -204,6 +204,7 @@ export function addJob(data) {
     notes: "",
     score: null,
     scoreDetails: null,
+    fit: null,
     tailored: null,
     followup: null,
     interviewPrep: null,
