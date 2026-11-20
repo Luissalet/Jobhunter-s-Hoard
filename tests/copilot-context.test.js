@@ -76,7 +76,7 @@ test("the applications list reports its filters, the ticked rows and the search 
 });
 
 test("an open job returns the real job and its search; the detail tab and unsaved fields travel in the view", async () => {
-  const editors = [{ kind: "job-notes", object_id: "j1", dirty: true, fields: { notes: "Hablar con Marta y Luis." } }];
+  const editors = [{ kind: "job-notes", object_id: "j1", dirty: true, fields: { notes: "Hablar con el equipo de selección." } }];
   const ctx = await buildContext({ loadState, loadAnswers, editors, view: { tab: "pipeline", job_id: "j1", detail_tab: "draft" } });
   assert.deepEqual(ids(ctx).slice(0, 2), ["job:j1", "context:c1"]);
   const job = ctx.active_objects[0];
@@ -90,7 +90,7 @@ test("an open job returns the real job and its search; the detail tab and unsave
   assert.equal(ctx.view.job_id, "j1");
   assert.equal(ctx.view.detail_tab, "draft");
   assert.equal(ctx.view.route, "/applications/jobs/j1");
-  assert.equal(ctx.view.editor.fields.notes, "Hablar con Marta y Luis.");
+  assert.equal(ctx.view.editor.fields.notes, "Hablar con el equipo de selección.");
 });
 
 test("creation forms, the unknown id and the new id give no object and never throw", async () => {
