@@ -5,7 +5,7 @@
 web
 
 ## Users
-Luis, buscando empleo técnico y de IA, quiere dejar de repetir formularios y mantener hojas de seguimiento manuales.
+Las personas que buscan empleo técnico o de IA necesitan reutilizar sus datos de candidatura y centralizar el seguimiento.
 
 ## Product Purpose
 Un espacio local para preparar candidaturas con datos reales, reutilizar respuestas y registrar el trabajo de una IA con navegador mediante MCP.
