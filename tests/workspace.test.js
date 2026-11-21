@@ -13,6 +13,7 @@ process.env.HOARD_HUB_URL = "http://127.0.0.1:9";
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "jobhunt-test-"));
 process.env.JOBHUNT_DATA_DIR = path.join(temp, "data");
 const store = await import("../server/store.js");
+const { TOOLS } = await import("../server/agent-tools.js");
 const ctx = await import("../server/context.js");
 const apps = await import("../server/applications.js");
 const root = path.resolve(import.meta.dirname, "..");
@@ -306,7 +307,8 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
     // the Hoard family contract: health block, catalogue, bearer-token call
     assert.equal(health.hoard_link.app, "jobhunter");
     const catalog = await (await fetch(base + "/api/agent/tools")).json();
-    assert.ok(catalog.tools.length > 3 && catalog.instructions.length > 20);
+    assert.ok(catalog.instructions.length > 20);
+    assert.deepEqual(catalog.tools.map((tool) => tool.name).sort(), TOOLS.map((tool) => tool.name).sort());
     assert.ok(catalog.tools.every((t) => t.inputSchema && t.inputSchema.type === "object" && "readOnlyHint" in t.annotations));
     const token = (await fs.readFile(path.join(data, "mcp-token"), "utf8")).trim();
     const listed = await fetch(base + "/api/agent/call", {
@@ -359,7 +361,8 @@ test("HTTP bridge and official SDK stdio client share the same persisted state",
     const client = new Client({ name: "integration-test", version: "1" });
     try {
       await client.connect(transport);
-      assert.equal((await client.listTools()).tools.length, 20);
+      const { tools } = await client.listTools();
+      assert.deepEqual(tools.map((tool) => tool.name).sort(), TOOLS.map((tool) => tool.name).sort());
       const call = async (name, args = {}) => {
         const out = await client.callTool({ name, arguments: args });
         assert.equal(out.isError, undefined, JSON.stringify(out));
