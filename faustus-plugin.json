@@ -31,6 +31,10 @@
     "optional_env": []
   },
   "x-family": {
+    "isolated_instance": {
+      "data_env": "JOBHUNT_DATA_DIR",
+      "port_env": "PORT"
+    },
     "stack": "node",
     "copilot": {
       "provider": "faustus",
